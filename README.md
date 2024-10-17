@@ -5,7 +5,7 @@
 
 - You can find the slides in the following locations:
   - Introduction (SAE and R)
-    - [Day 1 slides](https://joshmerfeld.github.io/bangkokworkshops/day1.html)
+    - [Intro slides](https://escap-sd.github.io/bangkokworkshops/intro.html)
   - Vector data (shapefiles) and coordinate reference systems
     - Part 1
     - Part 2
