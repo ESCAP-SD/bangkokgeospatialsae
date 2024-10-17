@@ -7,10 +7,10 @@
   - Introduction (SAE and R)
     - [Intro slides](https://escap-sd.github.io/bangkokworkshops/intro.html)
   - Vector data (shapefiles) and coordinate reference systems
-    - Part 1
-    - Part 2
+    - [Vector data slides](https://escap-sd.github.io/bangkokworkshops/intro.html)
   - Raster data
-    - Part 1
-    - Part 2
+    - [Raster data slides](https://escap-sd.github.io/bangkokworkshops/intro.html)
   - SAE methods
+    - [SAE slides](https://escap-sd.github.io/bangkokworkshops/intro.html)
   - Team task
+    - [Team task slides](https://escap-sd.github.io/bangkokworkshops/intro.html)
