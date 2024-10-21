@@ -1,0 +1,4087 @@
+---
+title: "Geospatial/SAE workshop"
+subtitle: "Vector files (shapefiles)"
+author: "Josh Merfeld"
+date: "October 2024"
+date-format: "MMMM YYYY"
+
+format: 
+  revealjs:
+    self-contained: true
+    slide-number: false
+    progress: false
+    theme: [serif, custom.scss]
+    width: 1500
+    height: 1500*(9/16)
+    code-copy: true
+    code-fold: show
+    code-overflow: wrap
+    highlight-style: github
+execute:
+  echo: true
+  warnings: false
+---
+
+
+```{r}
+#| label: setup
+#| include: false
+knitr::knit_hooks$set(crop = knitr::hook_pdfcrop)
+
+library(tidyverse)
+library(sf)
+library(terra)
+library(tidyterra)
+library(cowplot)
+library(kableExtra)
+library(haven)
+
+kdisgreen <- "#006334"
+accent <- "#340063"
+accent2 <- "#633400"
+kdisgray <- "#A7A9AC"
+
+```
+
+
+
+## Introduction to geospatial data
+
+-   [One estimate](https://www.ibm.com/topics/geospatial-data) says that 100 TB of only weather data are generated every single day
+    -   This means there is a lot of data to work with!
+    -   Note that this is also problematic, since it can be difficult to work with such large datasets
+-   Geospatial data is used in a variety of fields
+    -   Agriculture
+    -   Urban planning
+    -   Environmental science
+    -   Public health
+    -   Transportation
+    -   And many more!
+
+## The amount of geospatial data is useful for many applications!
+
+-   Geospatial data can be highly predictive of e.g. poverty
+    -   Urbanity
+    -   Land class/cover
+    -   Vegetation indices
+    -   Population counts
+    -   etc. etc.
+-   More importantly: it's available everywhere!
+
+
+
+
+# Getting started with <br>geospatial data {#color-slide background-image="vectorfilesassets/titlebackground.jpg"}
+
+```{css, echo=FALSE}
+#color-slide, 
+#color-slide h1 {
+ color: white;
+ text-align: left;
+}
+```
+
+  
+  
+  
+## Getting started with geospatial data
+
+- What are we doing today?
+  - Shapefiles
+    - Polygons
+    - Points
+    - Lines
+    - Mapping with the package `sf`
+  - Coordinate reference systems
+    - Latitude/longitude
+    - Projections
+
+
+  
+  
+  
+## Shapefiles
+
+
+- Shapefiles are a common format for geospatial data
+  - They are a form of `vector` data
+
+- Shapefiles are made up of _at least_ three files:
+  - `.shp` - the shape itself
+  - `.shx` - the index
+  - `.dbf` - the attributes
+  - `.prj` - the projection
+    - This one is not technically necessary! But it's common to have.
+  - What these all mean isn't important for now, just make sure they are there! Check the `week2files` folder on github.
+
+
+  
+  
+  
+## Let's look at Northern Malawi
+
+::: columns
+::: {.column width="50%"}
+
+- Collection of `features`
+
+```{r}
+#| echo: false
+#| include: true
+#| fig-align: center
+#| crop: true
+#| fig-width: 4
+
+admin2 <- read_sf("vectorfilesdata/mw2.shp")
+
+ggplot() + 
+  geom_sf(data = admin2, fill = "white", color = kdisgray) +
+  geom_sf(data = admin2 |> filter(DIST_CODE=="107"), fill = "white", color = kdisgreen) +
+  theme_bw() +
+  labs(subtitle = "Districts in Northern Malawi") +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+
+```
+
+
+:::
+
+::: {.column width="50%"}
+
+- One `feature`
+
+```{r}
+#| echo: false
+#| include: true
+#| fig-align: center
+#| crop: true
+#| fig-width: 6
+
+ggplot() + 
+  geom_sf(data = admin2 |> filter(DIST_CODE=="107"), fill = "white", color = kdisgreen) +
+  theme_bw() +
+  labs(subtitle = "Mzuzu City") +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+```
+
+:::
+:::
+
+
+
+
+  
+  
+  
+## Types of features
+
+
+- `Polygons`
+  - Areas
+  - Districts, countries, etc.
+- `Lines`
+  - Lines
+  - Roads, rivers, etc.
+- `Points`
+  - Points
+  
+  
+  
+## Let's start with polygons
+
+```{r}
+#| echo: false
+#| include: true
+#| fig-align: center
+#| crop: true
+#| fig-width: 10
+
+admin2 <- read_sf("vectorfilesdata/mw2.shp")
+vertices <- spatialEco::extract.vertices(admin2 |> filter(DIST_CODE=="107"))
+
+g1 <- ggplot() + 
+  geom_sf(data = admin2 |> filter(DIST_CODE=="107"), fill = "white", color = kdisgreen) +
+  theme_bw() +
+  labs(subtitle = "Mzuzu City") +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+g2 <- ggplot() + 
+  geom_sf(data = admin2 |> filter(DIST_CODE=="107"), fill = "white", color = kdisgreen) +
+  geom_sf(data = vertices, color = accent, size = 0.5) +
+  theme_bw() +
+  labs(subtitle = "Mzuzu City - 489 vertices!") +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+
+plot_grid(g1, g2, ncol = 2) +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+```
+
+
+  
+  
+  
+## Imagine a rectangle, on a coordinate plane
+
+```{r}
+#| echo: false
+#| include: true
+#| fig-align: center
+
+square <- data.frame(
+  x = c(1, 1, 3, 3),
+  y = c(1, 3, 3, 1)
+)
+
+ggplot() +
+  geom_point(data = square, aes(x = x, y = y), color = NA) +
+  scale_x_continuous(breaks = c(0, 1, 2, 3, 4), minor_breaks = NULL, limits = c(0, 4)) +
+  scale_y_continuous(breaks = c(0, 1, 2, 3, 4), minor_breaks = NULL, limits = c(0, 4)) +
+  theme_bw() +
+  # add text
+  annotate("text", x = 2, y = 2, label = "How many points do we need\nto create a rectangle on this\ncoordinate plane?") +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+
+
+```
+
+
+  
+  
+  
+## Imagine a rectangle, on a coordinate plane
+
+```{r}
+#| echo: false
+#| include: true
+#| fig-align: center
+
+square <- data.frame(
+  x = c(1, 1, 3, 3),
+  y = c(1, 3, 3, 1)
+)
+
+ggplot() +
+  geom_point(data = square, aes(x = x, y = y), color = kdisgreen) +
+  scale_x_continuous(breaks = c(0, 1, 2, 3, 4), minor_breaks = NULL, limits = c(0, 4)) +
+  scale_y_continuous(breaks = c(0, 1, 2, 3, 4), minor_breaks = NULL, limits = c(0, 4)) +
+  theme_bw() +
+  # add text
+  annotate("text", x = 2, y = 2, label = "Four points!") +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+
+
+```
+
+
+  
+  
+  
+## Imagine a rectangle, on a coordinate plane
+
+::: columns
+::: {.column width="50%"}
+
+- We need four points.
+- But polygons in shapefiles are a little different.
+  - We have to "close" the feature so it knows it's a polygon!
+- We do this by adding a fifth point: the same as the first point!
+
+
+```{=html}
+<table style="width:100%">
+  <caption><span data-qmd="Five points (vertices) in our feature"></span></caption>
+  <thead>
+    <tr style="border-top:1px solid black">
+      <th><span data-qmd=" "></span></th>
+      <th><span data-qmd="X value"></span></th>
+      <th><span data-qmd="Y value"></span></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Point 1</td>
+      <td style='text-align:center; vertical-align:middle'> 1 </td>
+      <td style='text-align:center; vertical-align:middle'> 1 </td>
+    </tr>
+    <tr>
+      <td>Point 2</td>
+      <td style='text-align:center; vertical-align:middle'> 3 </td>
+      <td style='text-align:center; vertical-align:middle'> 1 </td>
+    </tr>
+    <tr>
+      <td>Point 3</td>
+      <td style='text-align:center; vertical-align:middle'> 3 </td>
+      <td style='text-align:center; vertical-align:middle'> 3 </td>
+    </tr>
+    <tr>
+      <td>Point 4</td>
+      <td style='text-align:center; vertical-align:middle'> 1 </td>
+      <td style='text-align:center; vertical-align:middle'> 3 </td>
+    </tr>
+    <tr>
+      <td>Point 5</td>
+      <td style='text-align:center; vertical-align:middle'> 1 </td>
+      <td style='text-align:center; vertical-align:middle'> 1 </td>
+    </tr>
+  </tbody>
+</table>
+```
+
+
+:::
+
+::: {.column width="50%"}
+
+```{r}
+#| echo: false
+#| include: true
+#| fig-align: center
+
+square <- data.frame(
+  x = c(1, 1, 3, 3),
+  y = c(1, 3, 3, 1)
+)
+
+ggplot() +
+  geom_point(data = square, aes(x = x, y = y), color = kdisgreen) +
+  scale_x_continuous(breaks = c(0, 1, 2, 3, 4), minor_breaks = NULL, limits = c(0, 4)) +
+  scale_y_continuous(breaks = c(0, 1, 2, 3, 4), minor_breaks = NULL, limits = c(0, 4)) +
+  theme_bw() +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+
+
+```
+
+:::
+:::
+
+
+
+
+
+## All features are made of vertices
+
+::: columns
+::: {.column width="50%"}
+
+- So we have all our vertices (489 of them!)
+- The question:
+  - What is the coordinate system here?
+
+:::
+
+::: {.column width="50%"}
+
+```{r}
+#| echo: false
+#| include: true
+#| crop: true
+#| fig-align: center
+#| fig-width: 6
+
+admin2 <- read_sf("vectorfilesdata/mw2.shp")
+vertices <- spatialEco::extract.vertices(admin2 |> filter(DIST_CODE=="107"))
+
+ggplot() + 
+  geom_sf(data = admin2 |> filter(DIST_CODE=="107"), fill = "white", color = kdisgreen) +
+  geom_sf(data = vertices, color = accent, size = 0.5) +
+  theme_bw() +
+  labs(subtitle = "Mzuzu City - 489 vertices!") +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+
+```
+
+:::
+:::
+
+
+
+
+
+## All features are made of vertices
+
+::: columns
+::: {.column width="50%"}
+
+- So we have all our vertices (489 of them!)
+- The question:
+  - What is the coordinate system here?
+  
+- We will return to this in a bit!
+
+:::
+
+::: {.column width="50%"}
+
+```{r}
+#| echo: false
+#| include: true
+#| crop: true
+#| fig-align: center
+#| fig-width: 6
+
+admin2 <- read_sf("vectorfilesdata/mw2.shp")
+vertices <- spatialEco::extract.vertices(admin2 |> filter(DIST_CODE=="107"))
+
+ggplot() + 
+  geom_sf(data = admin2 |> filter(DIST_CODE=="107"), fill = "white", color = kdisgreen) +
+  geom_sf(data = vertices, color = accent, size = 0.5) +
+  theme_bw() +
+  labs(subtitle = "Mzuzu City - 489 vertices!") +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+
+```
+
+:::
+:::
+
+
+
+
+
+
+
+## One more example of polygons
+
+::: columns
+::: {.column width="50%"}
+
+```{r}
+#| echo: false
+#| include: true
+#| crop: true
+#| fig-align: center
+#| fig-width: 5
+
+nyc <- read_sf("vectorfilesdata/bldg_footprints.shp")
+
+ggplot() + 
+  geom_sf(data = nyc, fill = "white", color = kdisgreen) +
+  theme_bw() +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  # smaller axis labels
+  theme(axis.text = element_text(size = 6))
+
+```
+
+:::
+
+::: {.column width="50%"}
+
+
+
+:::
+:::
+
+
+
+
+
+
+
+## One more example of polygons
+
+::: columns
+::: {.column width="50%"}
+
+```{r}
+#| echo: false
+#| include: true
+#| crop: true
+#| fig-align: center
+#| fig-width: 5
+
+nyc <- read_sf("vectorfilesdata/bldg_footprints.shp")
+
+ggplot() + 
+  geom_sf(data = nyc, fill = "white", color = kdisgreen) +
+  theme_bw() +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  # smaller axis labels
+  theme(axis.text = element_text(size = 6))
+
+```
+
+:::
+
+::: {.column width="50%"}
+
+```{r}
+#| echo: false
+#| include: true
+#| crop: true
+#| fig-align: center
+#| fig-width: 5
+
+
+ggplot() + 
+  geom_sf(data = nyc, aes(fill = Height), color = NA) +
+  scale_fill_distiller("Height (m)", palette = "Spectral") +
+  theme_bw() +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  # smaller axis labels
+  theme(axis.text = element_text(size = 6)) +
+  theme(legend.position = c(0.88, 0.14)) +
+  # make legend smaller
+  theme(legend.text = element_text(size = 8)) +
+  theme(legend.title = element_text(size = 8)) +
+  theme(legend.key.size = unit(0.4, "cm")) +
+  # transparent legend background
+  theme(legend.background = element_rect(fill = "transparent"))
+
+```
+
+:::
+:::
+
+
+
+
+
+
+
+## Lines
+
+- Lines are also made up of vertices
+- But they are not closed
+
+
+
+## Lines example - "Primary" roads in India (2014)
+
+```{r}
+#| echo: false
+#| include: true
+#| fig-align: center
+#| crop: true
+
+roads <- read_sf("vectorfilesdata/indiaprimaryroads.shp")
+
+ggplot() + 
+  geom_sf(data = roads, color = kdisgreen) +
+  theme_bw() +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+
+```
+
+
+
+## One road
+
+<br><br><br>
+Length of this line feature: `r round(st_length(st_transform(roads[1,], 24378)), 2)` (m)
+
+<br>
+
+```{r}
+#| echo: false
+#| include: true
+#| fig-align: center
+#| crop: true
+
+vertices <- spatialEco::extract.vertices(roads[1,])
+
+ggplot() + 
+  geom_sf(data = roads[1,], color = kdisgreen) +
+  geom_sf(data = vertices, color = accent, size = 2) +
+  theme_bw() +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+
+```
+
+
+
+
+
+## Points
+
+- Points are exactly what they sound like: points!
+
+- What could be a point?
+
+
+
+
+
+## Points
+
+- Points are exactly what they sound like: points!
+
+- What could be a point?
+  - A city
+  - A weather station
+  - A tree
+  - A household
+  - etc.
+
+
+
+
+
+## What do you think this is?
+
+
+::: columns
+::: {.column width="50%"}
+
+```{r}
+#| echo: false
+#| include: true
+#| fig-align: center
+#| crop: true
+#| fig-width: 5
+
+points <- read_sf("vectorfilesdata/hotosm_kor_railways_points_shp.shp")
+korea <- read_sf("vectorfilesdata/korea.shp")
+
+ggplot() + 
+  geom_sf(data = points, color = kdisgreen, size = 0.5) +
+  geom_sf(data = korea, fill = NA, color = NA) +
+  theme_bw() +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  # smaller axis labels
+  theme(axis.text = element_text(size = 6))
+  
+
+```
+
+:::
+
+::: {.column width="50%"}
+
+
+:::
+:::
+
+
+
+
+
+## What do you think this is?
+
+
+::: columns
+::: {.column width="50%"}
+
+```{r}
+#| echo: false
+#| include: true
+#| fig-align: center
+#| crop: true
+#| fig-width: 5
+
+points <- read_sf("vectorfilesdata/hotosm_kor_railways_points_shp.shp")
+korea <- read_sf("vectorfilesdata/korea.shp")
+
+ggplot() + 
+  geom_sf(data = points, color = kdisgreen, size = 0.5) +
+  geom_sf(data = korea, fill = NA, color = NA) +
+  theme_bw() +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  # smaller axis labels
+  theme(axis.text = element_text(size = 6))
+  
+
+```
+
+:::
+
+::: {.column width="50%"}
+
+```{r}
+#| echo: false
+#| include: true
+#| fig-align: center
+#| crop: true
+#| fig-width: 5
+
+ggplot() + 
+  geom_sf(data = points, color = kdisgreen, size = 0.5) +
+  geom_sf(data = korea, fill = NA, color = kdisgray) +
+  theme_bw() +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  # smaller axis labels
+  theme(axis.text = element_text(size = 6))
+  
+
+```
+
+:::
+:::
+
+
+
+
+
+## Train stations! First 15
+
+```{r}
+#| echo: false
+#| include: true
+#| fig-align: center
+#| crop: true
+#| fig-width: 8
+
+mat <- head(points |> select(name, name_en, railway, geometry) |> st_centroid(), 16)[-7,]
+kable(mat, align = c("l", "l", "c", "c"), table.attr = "style='width:80%;'") |>
+  kable_minimal()
+  
+
+```
+
+
+
+
+
+## The train stations are a collection of features
+
+- Just like before, the shapefile is a collection of features!
+- The only difference now is that each feature is a point
+
+
+
+
+
+
+
+
+
+## Reading and plotting shapefiles in R
+
+```{r}
+#| echo: false
+#| include: true
+#| crop: true
+#| fig-height: 2
+#| fig-align: left
+
+gambia <- read_sf("vectorfilesdata/gambia.shp")
+
+ggplot() + 
+  geom_sf(data = gambia, color = kdisgreen, fill = "#f0f1eb") +
+  theme_bw() +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  # smaller axis labels
+  theme(axis.text = element_text(size = 6))
+  
+
+```
+
+
+
+## Reading shapefiles in R
+
+- My go-to package for shapefiles in R is `sf`
+- Reading shapefiles is VERY easy! And you can treat them like dataframes.
+
+```{r}
+#| echo: true
+#| include: true
+#| fig-align: center
+#| crop: true
+
+library(sf)
+# this is the shapefile for Gambia
+gambia <- read_sf("vectorfilesdata/gambia.shp")
+gambia
+```
+
+
+
+
+
+
+
+## Plotting is also very easy
+
+
+```{r}
+#| echo: true
+#| include: true
+#| crop: true
+#| fig-align: center
+
+ggplot() + 
+  geom_sf(data = gambia)
+```
+
+
+
+
+
+
+
+
+## My go-to theme
+
+
+```{r}
+#| echo: true
+#| include: true
+#| crop: true
+#| fig-align: center
+ggplot() +
+  geom_sf(data = gambia) +
+  theme_bw()
+```
+
+
+
+
+
+
+
+## Other changes you can make
+
+
+```{r}
+#| echo: true
+#| include: true
+#| crop: true
+#| fig-align: center
+ggplot() +
+  geom_sf(data = gambia, fill = "#f0f1eb", color = "#006334") +
+  theme_bw() +
+  labs(subtitle = "Admin3s in Gambia")
+```
+
+
+
+
+
+
+
+## Give it a try with TAs (admin3) in Malawi (mw3.shp)
+
+```{r}
+#| eval: false
+#| echo: true
+#| code-fold: true
+library(sf)
+# this is the shapefile for the northern region of Malawi, TA level
+northmw <- read_sf("vectorfilesdata/mw3.shp")
+ggplot() +
+  geom_sf(data = northmw)
+```
+
+```{r}
+#| eval: false
+#| echo: true
+#| code-fold: true
+
+ggplot() +
+  geom_sf(data = northmw) +
+  theme_bw() +
+  labs(subtitle = "TAs in Northern Malawi")
+```
+
+
+
+
+
+
+## One more example - map from earlier
+
+
+::: columns
+::: {.column width="65%"}
+
+```{r}
+#| echo: true
+#| eval: false
+#| crop: true
+#| fig-align: center
+
+admin2 <- read_sf("vectorfilesdata/mw2.shp")
+
+ggplot() + 
+  geom_sf(data = admin2, 
+    fill = "white", color = kdisgray) +
+  geom_sf(data = admin2 |> filter(DIST_CODE=="107"), 
+    fill = "white", color = kdisgreen) +
+  theme_bw() +
+  labs(subtitle = "Districts in Northern Malawi")
+```
+
+:::
+
+::: {.column width="35%"}
+
+![](vectorfilesassets/exampleplot.png){fig-align="center"}
+
+:::
+:::
+
+
+
+
+
+
+
+## What if we want to plot mw2, mw3, and mw4?
+
+
+```{r}
+#| echo: false
+#| eval: true
+#| crop: true
+#| fig-align: center
+
+admin2 <- read_sf("vectorfilesdata/mw2.shp")
+admin3 <- read_sf("vectorfilesdata/mw3.shp")
+admin4 <- read_sf("vectorfilesdata/mw4.shp")
+
+g1 <- ggplot() + 
+  geom_sf(data = admin2, fill = "white", color = "black") +
+  theme_bw() + labs(subtitle = "A. Admin2 (districts)")
+g2 <- ggplot() + 
+  geom_sf(data = admin3, fill = "white", color = "black") +
+  theme_bw() + labs(subtitle = "B. Admin3 (TAs)")
+g3 <- ggplot() + 
+  geom_sf(data = admin4, fill = "white", color = "black") +
+  theme_bw() + labs(subtitle = "C. Admin4 (EAs)")
+
+plot_grid(g1, g2, g3, ncol = 3)
+```
+
+
+
+
+
+
+
+## What if we want to plot mw2, mw3, and mw4?
+
+```{r}
+#| echo: true
+#| eval: false
+#| crop: true
+#| fig-align: center
+
+admin2 <- read_sf("vectorfilesdata/mw2.shp")
+admin3 <- read_sf("vectorfilesdata/mw3.shp")
+admin4 <- read_sf("vectorfilesdata/mw4.shp")
+
+g1 <- ggplot() + 
+  geom_sf(data = admin2, fill = "white", color = "black") +
+  theme_bw() + labs(subtitle = "A. Admin2 (districts)")
+g2 <- ggplot() + 
+  geom_sf(data = admin3, fill = "white", color = "black") +
+  theme_bw() + labs(subtitle = "B. Admin3 (TAs)")
+g3 <- ggplot() + 
+  geom_sf(data = admin4, fill = "white", color = "black") +
+  theme_bw() + labs(subtitle = "C. Admin4 (EAs)")
+```
+
+
+
+
+
+
+
+## What if we want to plot mw2, mw3, and mw4?
+
+- Enter `cowplot`!
+
+```{r}
+#| echo: true
+#| eval: false
+#| crop: true
+#| fig-align: center
+
+library(cowplot)
+
+plot_grid(g1, g2, g3, ncol = 3)
+```
+
+
+
+
+## A quick note about shapefile sizes
+
+- What do you think is the main determinant of the size of a shapefile?
+
+. . .
+
+- The number of vertices!
+  - Geographic size doesn't really matter!
+
+. . .
+
+- For the three Malawi shapefiles?
+  - `mw2.shp`: 448 KB
+  - `mw3.shp`: 4.9 MB
+  - `mw4.shp`: 40.3 MB
+
+. . .
+
+- And this is only for Northern Malawi.
+  - The entire country is 123 MB
+  - The 2023 shapefile from OSM for Indian roads is 236 MB
+  - The shapefile of Indian villages is 614 MB
+
+
+
+
+## And that's only shapefile
+
+- Other geospatial data can get even bigger!
+
+- How large do you think the folder on my computer that contains imagery for all of Malawi (at 5m resolution) is?
+
+. . .
+
+- About 55 GB!
+
+- This is just a warning... I'll generally always give you (relatively) small files for practice
+
+
+
+
+
+
+
+# Let's talk about coordinates
+
+
+
+
+## Latitude and longitude on a globe
+
+- The most common `coordinate reference system (CRS)` is latitude/longitude
+  - Latitude: North/South
+  - Longitude: East/West
+  - The equator is at 0° latitude
+  - The prime meridian is at 0° longitude<br><br>
+  
+- But there's a problem with using latitude/longitude
+  - The Earth is a sphere (well, more or less; really an oblate spheroid)
+
+
+
+
+
+## {background-image="vectorfilesassets/worldmap.png"}
+
+
+## {background-image="vectorfilesassets/worldmap2.png"}
+
+
+
+
+
+## The basic problem
+
+- The basic problem is that one degree of longitude changes at different latitudes!
+  - At the equator, one degree of longitude is about 111 km
+  - At 15N/S, one degree of longitude is about 107 km
+  - At 30N/S, one degree of longitude is about 96 km
+  - At 45N/S, one degree of longitude is about 79 km
+  - At 60N/S, one degree of longitude is about 56 km
+    - This explains Greenland!<br><br>
+    
+- It's not an easy problem to solve, as all solutions have drawbacks!
+
+
+
+
+
+## Preserve shape, give up area
+
+```{r}
+#| echo: false
+#| include: true
+#| fig-align: center
+#| crop: true
+
+temp <- magick::image_read("vectorfilesassets/crs1.png")
+temp2 <- magick::image_read("vectorfilesassets/crs2.png")
+
+
+g1 <- magick::image_ggplot(temp) +
+  labs(subtitle = "A. Mercator projection") +
+  theme_void() +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+g2 <- magick::image_ggplot(temp2) +
+  labs(subtitle = "B. Lambert projection") +
+  theme_void() +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+
+plot_grid(g1, NA, g2, ncol = 3, rel_widths = c(1, 0.05, 1)) +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+
+```
+
+
+
+
+
+
+## Projections
+
+- A `projection` is a way to represent the Earth's surface on a flat plane
+  - In other words, it's a way to transform the three-dimensional surface of the earth into two dimensions
+  - Think of this as a way to "flatten" the Earth
+
+. . .
+  
+- "Equal area" projections
+  - These projections preserve the area of features
+- "Conformal" projections
+  - These projections preserve the shape of features
+
+. . .
+  
+- It is impossible to perfectly preserve both!
+  - But they can be close, especially in smaller areas
+  - The earth looks quite flat from close up, after all
+  
+  
+  
+  
+## Robinson projection: compromise across the board
+
+```{r}
+#| echo: false
+#| include: true
+#| fig-align: center
+#| crop: true
+
+temp <- magick::image_read("vectorfilesassets/robinson.png")
+
+magick::image_ggplot(temp) +
+  theme_void() +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  labs(caption = "Source: QGIS")
+  
+
+```
+  
+  
+  
+  
+## Meractor projection: preserves angular relationships
+
+```{r}
+#| echo: false
+#| include: true
+#| fig-align: center
+#| crop: true
+
+temp <- magick::image_read("vectorfilesassets/mercator.png")
+
+magick::image_ggplot(temp) +
+  theme_void() +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  labs(caption = "Source: QGIS")
+
+```
+  
+  
+  
+  
+## Azimuthal Equidistant projection
+
+```{r}
+#| echo: false
+#| include: true
+#| fig-align: center
+#| crop: true
+
+temp <- magick::image_read("vectorfilesassets/un.png")
+
+magick::image_ggplot(temp) +
+  theme_void() +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  labs(caption = "Source: QGIS/UN")
+
+```
+  
+  
+  
+  
+## Mollweide Equal Area Cylindrical projection
+
+```{r}
+#| echo: false
+#| include: true
+#| fig-align: center
+#| crop: true
+
+temp <- magick::image_read("vectorfilesassets/mollweide.png")
+
+magick::image_ggplot(temp) +
+  theme_void() +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  labs(caption = "Source: QGIS")
+
+```
+
+
+  
+  
+
+## Three families of projections
+
+- The [QGIS website](https://docs.qgis.org/3.34/en/docs/gentle_gis_introduction/coordinate_reference_systems.html) has a great explanation of the three families of projections
+  - Cylindrical
+  - Conical
+  - Planar
+  
+  
+  
+  
+## Three families of projections
+
+```{r}
+#| echo: false
+#| include: true
+#| fig-align: center
+#| crop: true
+
+temp <- magick::image_read("vectorfilesassets/projections.png")
+
+magick::image_ggplot(temp) +
+  theme_void() +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  labs(caption = "Source: QGIS")
+
+```
+
+
+
+
+
+
+
+
+## Coordinate reference systems
+
+- Coordinate reference systems (CRS) are a way to define how coordinates are represented
+  - This includes the projection, but also other things
+  
+- The most popular is probably WGS 84 (EPSG:4326), which is a geographic CRS
+  - This is latitude/longitude
+- One degree of lat/lon:
+  - 60 minutes
+- One minute:
+  - 60 seconds
+  
+. . .
+  
+- Geographic here means it is the location on the earth's surface
+  - This is different from a projected CRS, which is more about how to draw the earth on a flat surface
+  
+  
+  
+  
+## Geographic vs. projected
+
+```{r}
+#| echo: false
+#| include: true
+#| fig-align: center
+#| crop: true
+
+temp <- magick::image_read("vectorfilesassets/gcspcs.png")
+
+magick::image_ggplot(temp) +
+  theme_void() +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  labs(caption = "Source: ESRI")
+
+```
+
+
+
+
+
+
+
+## A common CRS: Universal Transverse Mercator (UTM)
+
+- Universal Transverse Mercator (UTM) is a projected CRS
+  - It divides the world into 60 zones
+  - Each zone is 6° wide
+  - The equator is the origin of each zone
+  - The equator is at 0 m
+
+
+
+
+
+
+
+## Universal Transverse Mercator (UTM)
+
+```{r}
+#| echo: false
+#| include: true
+#| fig-align: center
+#| crop: true
+
+temp <- magick::image_read("vectorfilesassets/utm.png")
+
+magick::image_ggplot(temp) +
+  theme_void() +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  labs(caption = "Source: QGIS")
+
+```
+
+
+
+
+
+
+
+## A common CRS: Universal Transverse Mercator (UTM)
+
+- UTM defines X values ("longitude") FROM THE MIDDLE of each zone
+  - This middle line is called the central meridian
+
+- UTM defines Y values ("latitude") from the equater
+
+- There are some other details:
+  - UTM values are never negative, so we offset values
+    - This is called a "false easting" and "false northing"
+    - Details aren't super important
+
+- Note: it ignores altitude. It assumes a perfect ellipsoid
+
+
+
+
+
+
+## "Transverse mercator" projection per zone (N and S)
+
+```{r}
+#| echo: false
+#| include: true
+#| fig-align: center
+#| crop: true
+
+temp <- magick::image_read("vectorfilesassets/utmnew.png")
+
+magick::image_ggplot(temp) +
+  theme_void() +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  labs(caption = "Source: Wikipedia")
+
+```
+
+
+
+
+
+
+
+## Projections with `sf`
+
+```{r}
+#| echo: true
+#| include: true
+#| fig-align: center
+#| crop: true
+#| fig-width: 4
+
+admin2 <- read_sf("vectorfilesdata/mw2.shp")
+
+# Geographic CRS: WGS 84 - lat/lon
+crs(admin2)
+
+```
+
+
+
+
+
+
+
+## What is the appropriate zone for Malawi?
+
+- Go to Google
+  - Search "UTM CRS Malawi"
+
+- What did you find?
+
+. . .
+
+- UTM zone 36S
+- With the `sf` package, we want to find the "EPSG" code to project
+  - 20936
+
+
+
+
+## What is the appropriate zone for Malawi?
+  
+```{r}
+#| echo: true
+#| include: true
+#| fig-align: center
+#| crop: true
+#| fig-width: 4
+
+admin2proj <- st_transform(admin2, 20936)
+
+# It has changed! Now it's projected
+crs(admin2proj)
+
+```
+
+
+
+
+## They look quite similar!
+
+```{r}
+#| echo: false
+#| include: true
+#| fig-align: center
+#| crop: true
+
+g1 <- ggplot(admin2) +
+  geom_sf(fill = "white", color = kdisgreen) +
+  theme_bw() +
+  labs(subtitle = "A. Geographic CRS") +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+g2 <- ggplot(admin2proj) +
+  geom_sf(fill = "white", color = kdisgreen) +
+  theme_bw() +
+  labs(subtitle = "B. Projected CRS") +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  coord_sf(crs = st_crs(20936))
+
+plot_grid(g1, g2) +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+
+```
+
+
+
+
+## They look quite similar! Different coordinates
+
+```{r}
+#| echo: true
+#| evaluate: false
+#| fig-align: center
+#| crop: true
+
+g1 <- ggplot(admin2) +
+  geom_sf(fill = "white", color = kdisgreen) +
+  theme_bw() +
+  labs(subtitle = "A. Geographic CRS")
+g2 <- ggplot(admin2proj) +
+  geom_sf(fill = "white", color = kdisgreen) +
+  theme_bw() +
+  labs(subtitle = "B. Projected CRS") +
+  coord_sf(crs = st_crs(20936))
+
+```
+
+
+
+
+## Malawi is small. What about something larger?
+
+```{r}
+#| echo: false
+#| include: true
+#| fig-align: center
+#| crop: true
+
+temp <- read_sf("vectorfilesdata/state.shp")
+
+g1 <- ggplot(temp) +
+  geom_sf(fill = "white", color = kdisgreen) +
+  theme_bw() +
+  labs(subtitle = "A. Geographic CRS") +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+g2 <- ggplot(st_transform(temp, 24344)) +
+  geom_sf(fill = "white", color = kdisgreen) +
+  theme_bw() +
+  labs(subtitle = "B. Projected CRS") +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  coord_sf(crs = st_crs(24344))
+
+plot_grid(g1, g2) +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+
+```
+
+
+
+
+
+
+## Now it's your turn!
+
+- Use the Indian roads shapefile (`indiaprimaryroads.shp`)
+
+- Do the following: 
+  - Find the CRS of the shapefile
+  - Transform the shapefile to UTM zone 44N (EPSG: 24344)
+  - Graph both side by side using `cowplot`
+
+
+
+
+
+
+## The solution
+
+```{r}
+#| echo: true
+#| include: true
+#| fig-align: center
+#| crop: true
+
+roads <- read_sf("vectorfilesdata/indiaprimaryroads.shp")
+crs(roads)
+
+roadsproj <- st_transform(roads, 24344)
+crs(roadsproj)
+```
+
+
+
+
+
+
+## The solution
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: false
+#| fig-align: center
+#| crop: true
+
+g1 <- ggplot(roads) +
+  geom_sf(fill = "white", color = kdisgreen) +
+  theme_bw() +
+  labs(subtitle = "A. Geographic CRS")
+g2 <- ggplot(roadsproj) +
+  geom_sf(fill = "white", color = kdisgreen) +
+  theme_bw() +
+  labs(subtitle = "B. Projected CRS") +
+  coord_sf(crs = st_crs(24344))
+
+plot_grid(g1, g2)
+```
+
+
+
+
+
+
+## The solution
+
+```{r}
+#| echo: false
+#| include: true
+#| fig-align: center
+#| crop: true
+
+g1 <- ggplot(roads) +
+  geom_sf(fill = "white", color = kdisgreen) +
+  theme_bw() +
+  labs(subtitle = "A. Geographic CRS") +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+g2 <- ggplot(roadsproj) +
+  geom_sf(fill = "white", color = kdisgreen) +
+  theme_bw() +
+  labs(subtitle = "B. Projected CRS") +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  coord_sf(crs = st_crs(24344))
+
+plot_grid(g1, g2) +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+```
+
+
+
+
+
+
+## More practice
+
+- I'd like you to find a shapefile for a country of your choice
+  - Ths isn't always easy
+  - I always use Google to find one
+  - One place you can often find something on humdata.org (almost always shows up in the search!)
+  
+- Do the following:
+  - Find the CRS of the shapefile
+  - Transform the shapefile to the appropriate UTM zone for the country
+    - Note that many countries have multiple UTM zones! You can just choose one
+  - Plot them side by side using `cowplot`
+
+
+  
+  
+  
+## Returning to the files
+
+- Shapefiles are made up of _at least_ four files:
+  - `.shp` - the shape itself
+    - The geometry
+  - `.shx` - the index
+    - The "index". You can actual recover the .shx file from the .shp file
+  - `.dbf` - the attributes
+    - The attributes for each features. Could be names, population values, etc.
+  - `.prj` - the projection
+    - The projection information, which we just discussed
+
+- There are often more files, but these are the main ones
+  - You **must** have the first three. The fourth is optional, but common.
+
+
+
+
+
+
+
+
+
+## Getting started with geospatial data, part II
+
+- What are we doing today?
+  - Shapefiles
+    - The packages `terra` and `tidyterra`
+    - More practice on maps
+- Operations on shapefiles
+  - Spatial merging
+- Areas and distances
+- More shapefile operations
+  - Continued next week, too
+
+
+
+# The package `terra`
+
+
+## A new package
+
+- Last week, we used the `sf` package
+  - This is a really nice, introductory way to ease into shapefiles
+  
+- The `terra` package, though, is much more powerful
+  - It is a complete replacement for the `sf` package
+  - It is also a complete replacement for the `raster` package
+  - It is also a complete replacement for the `sp` package
+  - It is also a complete replacement for the `rgdal` package
+  - Etc. etc. etc.
+  
+  
+  
+## Loading a shapefile
+
+```{r}
+#| echo: true
+#| include: true
+
+library(terra)
+
+# load the mw3 shapefile
+mw3 <- vect("vectorfilesdata/mw3.shp")
+
+mw3
+
+```
+  
+  
+  
+## Saving a shapefile
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: false
+
+# with terra
+writeVector(mw3, "locationoffile.shp")
+# with sf
+write_sf(mw3, "locationoffile.shp")
+
+```
+  
+  
+  
+## Plotting the shapefile
+
+```{r}
+#| echo: true
+#| include: true
+#| fig-align: center
+
+# terra uses base R plots by default!
+plot(mw3)
+
+```
+  
+  
+  
+## I don't use base R... so ggplot!
+
+```{r}
+#| echo: true
+#| eval: false
+#| crop: true
+#| fig-align: center
+# we need this library to use ggplot with terra objects
+library(tidyterra)
+ggplot() + 
+  geom_spatvector(data = mw3) +
+  theme_bw()
+
+```
+```{r}
+#| echo: false
+#| include: true
+#| crop: true
+#| fig-align: center
+# we need this library to use ggplot with terra objects
+library(tidyterra)
+
+ggplot() + 
+  geom_spatvector(data = mw3) +
+  theme_bw() + 
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) + 
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+
+```
+  
+  
+  
+## Find the name of the district variable
+
+## Find the name of the district variable
+
+
+```{r}
+#| echo: true
+#| eval: false
+#| crop: true
+#| fig-align: center
+ggplot() + 
+  geom_spatvector(data = mw3, aes(fill = DIST_CODE)) +
+  theme_bw()
+
+```
+```{r}
+#| echo: false
+#| include: true
+#| crop: true
+#| fig-align: center
+ggplot() + 
+  geom_spatvector(data = mw3, aes(fill = DIST_CODE)) +
+  theme_bw() +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) + 
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+
+```
+
+
+  
+  
+## Note that you can extract variables with `$`
+
+```{r}
+#| echo: true
+#| include: true
+
+mw3$DIST_CODE
+
+```
+  
+  
+  
+## What if we want to aggregate to districts?
+
+
+```{r}
+#| echo: false
+#| include: true
+#| crop: true
+#| fig-align: center
+
+ggplot() + 
+  geom_spatvector(data = mw3, aes(fill = DIST_CODE)) + 
+  theme_bw() +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) + 
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+
+```
+
+- i.e. we want to "aggregate" or "dissolve" polygons
+  
+  
+  
+## What if we want to create a new shapefile with districts?
+
+```{r}
+#| echo: true
+#| include: true
+
+mw2 <- aggregate(mw3, by = "DIST_CODE")
+nrow(mw2)
+# check if mw3 has same number of districts
+length(unique(mw3$DIST_CODE))
+
+```
+  
+  
+  
+## What if we want to create a new shapefile with districts?
+
+```{r}
+#| echo: true
+#| include: false
+#| crop: true
+
+g1 <- ggplot() + 
+  geom_spatvector(data = mw3, aes(fill = DIST_CODE)) +
+  labs(subtitle = "A. At adm3") +
+  theme_bw() +
+  scale_fill_brewer("", palette = "Set3") +
+  theme(legend.position = "bottom")
+g2 <- ggplot() + 
+  geom_spatvector(data = mw2, aes(fill = DIST_CODE)) +
+  labs(subtitle = "B. Aggregated to adm2") +
+  theme_bw() +
+  scale_fill_brewer("", palette = "Set3") +
+  theme(legend.position = "bottom")
+plot_grid(g1, g2)
+
+```
+  
+  
+  
+## What if we want to create a new shapefile with districts?
+
+```{r}
+#| echo: false
+#| include: true
+#| crop: true
+#| fig-align: center
+
+g1 <- ggplot() + 
+  geom_spatvector(data = mw3, aes(fill = DIST_CODE)) +
+  labs(subtitle = "A. At adm3") +
+  scale_fill_brewer("", palette = "Set3") +
+  theme_bw() +
+  theme(legend.position = "bottom") + 
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) + 
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+g2 <- ggplot() + 
+  geom_spatvector(data = mw2, aes(fill = DIST_CODE)) +
+  labs(subtitle = "B. Aggregated to adm2") +
+  scale_fill_brewer("", palette = "Set3") +
+  theme_bw() +
+  theme(legend.position = "bottom") +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) + 
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+plot_grid(g1, g2) + 
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) + 
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+
+```
+  
+  
+  
+## What if we want to do something like this?
+
+![](vectorfilesassets/pm10mapnew.png){width=50% fig-align="center"}
+
+
+
+
+## Let's start simpler!
+
+
+```{r}
+#| echo: false
+#| include: true
+#| crop: true
+#| fig-align: center
+
+mw3all <- vect("vectorfilesdata/mw3allcountry.shp")
+
+lilongwebox <- ext(mw3all[mw3all$NAME_1=="Lilongwe",])
+lilongwebox <- vect(lilongwebox, crs = crs(mw3all))
+blantyrebox <- ext(mw3all[mw3all$NAME_1=="Blantyre",])
+blantyrebox <- vect(blantyrebox, crs = crs(mw3all))
+
+lilongwe <- intersect(mw3all, lilongwebox)
+blantyre <- intersect(mw3all, blantyrebox)
+
+g1a <- ggplot() + 
+  geom_spatvector(data = mw3all, aes(fill = surveyobs), color = NA) +
+  scale_fill_distiller("Survey observations", palette = "Spectral") + 
+  theme(legend.position = "bottom") +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+legend <- get_plot_component(g1a, "guide-box-bottom") +
+  theme(legend.background = element_rect(fill = "NA", color = "NA"))
+
+g1 <- ggplot() + 
+  geom_spatvector(data = mw3all, aes(fill = surveyobs), color = NA) +
+  scale_fill_distiller("Survey observations", palette = "Spectral") +
+  geom_spatvector(data = lilongwebox, fill = NA, color = "black") +
+  geom_spatvector(data = blantyrebox, fill = NA, color = "black") +
+  theme_bw() +
+  theme(axis.title.x = element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank()) +
+  theme(axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank()) +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  theme(legend.position = "bottom") +
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"),
+    legend.key.width = unit(0.5, "inches")) +
+  guides(fill = guide_colorbar(title.position="top", title.hjust = 0.5)) +
+  expand_limits(x = ext(mw3all)[2] + 2.5)
+g2 <- ggplot() +
+  geom_spatvector(data = lilongwe, aes(fill = surveyobs), color = NA, show.legend = FALSE) +
+  scale_fill_distiller("Survey observations", palette = "Spectral", limits = c(min(mw3all$surveyobs), max(mw3all$surveyobs))) +
+  theme(legend.position = "bottom") +
+  labs(subtitle = "Lilongwe") +
+  theme_bw() +
+  theme(axis.title.x = element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank()) +
+  theme(axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank()) +
+  theme(plot.background = element_rect(fill = "transparent", color = "transparent")) +
+  theme(plot.subtitle=element_text(size=8))
+g3 <- ggplot() +
+  geom_spatvector(data = blantyre, aes(fill = surveyobs), color = NA, show.legend = FALSE) +
+  scale_fill_distiller("Survey observations", palette = "Spectral", limits = c(min(mw3all$surveyobs), max(mw3all$surveyobs))) +
+  theme(legend.position = "bottom") +
+  labs(subtitle = "Blantyre") +
+  theme_bw() +
+  theme(axis.title.x = element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank()) +
+  theme(axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank()) +
+  theme(plot.background = element_rect(fill = "transparent", color = "transparent")) +
+  theme(plot.subtitle=element_text(size=8))
+
+
+ggdraw(g1) +
+  draw_plot(g2, x = 0.425, y = 0.6, height = 0.275, width = 0.275) +
+  draw_plot(g3, x = 0.485, y = 0.23, height = 0.275, width = 0.2) +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+
+
+```
+  
+  
+  
+## A bunch of steps!
+
+1. Load the shapefile
+
+. . .
+
+2. Create bounding boxes and convert to `vect`
+
+. . .
+
+3. Intersect the shapefile with the bounding boxes
+
+. . .
+
+4. Plot the shapefile with the bounding boxes
+
+    - This last one takes a lot of experimentation
+  
+  
+  
+## Step 1: Load the shapefile
+
+- Please download the `mw3allcountry.zip` file and extract to your computer
+  - Then load it using `vect()`
+
+<br><br>
+
+```{r}
+#| echo: true
+#| include: true
+#| code-fold: true
+#| class-output: hscroll
+
+mw3all <- vect("vectorfilesdata/mw3allcountry.shp")
+# we'll use this variable
+mw3all$surveyobs
+
+```
+  
+  
+  
+## Step 2: Create bounding boxes (extent)
+
+- Now we have to find the extent of Lilongwe and Blantyre
+  - Look through the data
+  - What variables might help us with this?
+
+```{r}
+#| echo: true
+#| include: true
+#| class-output: hscroll
+
+mw3all
+
+```
+  
+  
+  
+## Step 2: Create bounding boxes (extent)
+
+- Let's look at the `NAME_1` variable
+
+```{r}
+#| echo: true
+#| include: true
+#| class-output: hscroll
+
+unique(mw3all$NAME_1)
+
+```
+  
+  
+  
+## Step 2: Create bounding boxes (extent)
+
+- Let's create new shapefiles for Lilongwe and Blantyre
+  - How?
+  
+. . .
+
+```{r}
+#| echo: true
+#| include: true
+#| class-output: hscroll
+
+lilongwe <- mw3all[mw3all$NAME_1=="Lilongwe",]
+blantyre <- mw3all[mw3all$NAME_1=="Blantyre",]
+
+```
+  
+. . .
+
+- Now create extents
+
+```{r}
+#| echo: true
+#| include: true
+#| class-output: hscroll
+lilongwebox <- ext(lilongwe)
+blantyrebox <- ext(blantyre)
+
+```
+  
+  
+  
+## Step 2: Create bounding boxes (extent)
+
+- What is an extent?
+  - We've covered this before!
+  
+```{r}
+#| echo: true
+#| include: true
+#| class-output: hscroll
+lilongwebox
+```
+
+<br>
+
+```{r}
+#| echo: true
+#| include: true
+#| class-output: hscroll
+blantyrebox
+```
+  
+  
+  
+## Step 2: Create bounding boxes (extent)
+
+- You can actually plot those as is! 
+  - But let's explicitly give them the correct CRS (and turn them into `vect` objects)
+  
+```{r}
+#| echo: true
+#| include: true
+#| class-output: hscroll
+lilongwebox <- vect(lilongwebox, crs = crs(mw3all))
+```
+
+- Try it for Blantyre
+
+```{r}
+#| echo: true
+#| include: true
+#| code-fold: true
+#| class-output: hscroll
+blantyrebox <- vect(blantyrebox, crs = crs(mw3all))
+```
+  
+  
+  
+## Let's plot them with the original shapefile
+
+::: columns
+::: {.column width="60%"}
+
+```{r}
+#| echo: true
+#| eval: false
+#| crop: true
+
+ggplot() + 
+  geom_spatvector(data = mw3all, 
+    aes(fill = surveyobs), color = NA) +
+  geom_spatvector(data = lilongwebox, 
+    fill = NA, color = "black") +
+  geom_spatvector(data = blantyrebox, 
+    fill = NA, color = "black") +
+  scale_fill_distiller("Survey\nobservations", 
+    palette = "Spectral") +
+  theme_bw()
+
+```
+
+
+:::
+
+::: {.column width="40%"}
+
+```{r}
+#| echo: false
+#| include: true
+#| crop: true
+#| fig-align: center
+
+ggplot() + 
+  geom_spatvector(data = mw3all, aes(fill = surveyobs), color = NA) +
+  geom_spatvector(data = lilongwebox, fill = NA, color = "black") +
+  geom_spatvector(data = blantyrebox, fill = NA, color = "black") +
+  scale_fill_distiller("Survey\nobservations", palette = "Spectral") +
+  theme_bw() +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+
+```
+
+:::
+:::
+
+  
+  
+  
+## Step 3: Intersect the shapefile with the bounding boxes
+
+::: columns
+::: {.column width="60%"}
+
+- Now we need to intersect the shapefile with the bounding boxes
+  - This will give us the shapefiles for Lilongwe and Blantyre
+
+```{r}
+#| echo: true
+#| eval: false
+#| crop: true
+
+lilongwe <- intersect(mw3all, lilongwebox)
+ggplot() + 
+  geom_spatvector(data = lilongwe, 
+    aes(fill = surveyobs), color = NA) +
+  scale_fill_distiller("Survey\nobservations", 
+    palette = "Spectral") +
+  theme_bw()
+
+```
+
+
+:::
+
+::: {.column width="40%"}
+
+```{r}
+#| echo: false
+#| include: true
+#| fig-height: 6
+#| crop: true
+#| fig-align: center
+lilongwe <- intersect(mw3all, lilongwebox)
+ggplot() + 
+  geom_spatvector(data = lilongwe, 
+    aes(fill = surveyobs), color = NA) +
+  scale_fill_distiller("Survey\nobservations", 
+    palette = "Spectral") +
+  theme_bw() +
+  # you can ignore this
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+
+```
+
+:::
+:::
+
+  
+  
+  
+## Go ahead and do the same for Blantyre
+
+(and plot it!)
+
+  
+
+  
+## Go ahead and do the same for Blantyre
+
+::: columns
+::: {.column width="60%"}
+
+```{r}
+#| echo: true
+#| eval: false
+#| crop: true
+
+blantyre <- intersect(mw3all, blantyrebox)
+ggplot() + 
+  geom_spatvector(data = blantyre, 
+    aes(fill = surveyobs), color = NA) +
+  scale_fill_distiller("Survey\nobservations", 
+    palette = "Spectral") +
+  theme_bw()
+
+```
+
+- Note the legend scale changed!
+  - We'll correct that later
+
+:::
+
+::: {.column width="40%"}
+
+```{r}
+#| echo: false
+#| include: true
+#| fig-height: 6
+#| crop: true
+#| fig-align: center
+blantyre <- intersect(mw3all, blantyrebox)
+ggplot() + 
+  geom_spatvector(data = blantyre, 
+    aes(fill = surveyobs), color = NA) +
+  scale_fill_distiller("Survey\nobservations", 
+    palette = "Spectral") +
+  theme_bw() +
+  # you can ignore this
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+
+```
+
+:::
+:::
+
+
+
+
+
+## Step 4. Plot the shapefile with the bounding boxes
+
+- This is the hard part!
+  - A couple hard things:
+
+- Grid size:
+  - For Malawi, the grid is quite small
+  - We want to expand it a bit
+  
+- Finding the right locations:
+  - It takes experimentation to figure out where to put the insets
+
+
+
+
+
+## Expanding the grid - can you spot the difference?
+
+```{r}
+#| echo: false
+#| include: true
+#| fig-dpi: 500
+#| crop: true
+#| fig-align: center
+
+scaleFUN <- function(x) paste0(sprintf("%.0f", x), "E")
+scaleFUNy <- function(x) paste0(sprintf("%.0f", x), "S")
+
+g1 <- ggplot() + 
+  geom_spatvector(data = mw3all, 
+    aes(fill = surveyobs), color = NA) +
+  scale_fill_distiller("Survey\nobservations", 
+    palette = "Spectral") +
+  theme_bw() +
+  theme(legend.position = "bottom") +
+  # you can ignore this
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  expand_limits(x = ext(mw3all)[2]) +
+  labs(x = "") +
+  scale_x_continuous(labels = scaleFUN) +
+  scale_y_continuous(labels = scaleFUNy) +
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+g2 <- ggplot() + 
+  geom_spatvector(data = mw3all, 
+    aes(fill = surveyobs), color = NA) +
+  scale_fill_distiller("Survey\nobservations", 
+    palette = "Spectral") +
+  theme_bw() +
+  theme(legend.position = "bottom") +
+  # you can ignore this
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  expand_limits(x = ext(mw3all)[2] + 1.25) +
+  labs(x = "") +
+  scale_x_continuous(labels = scaleFUN) +
+  scale_y_continuous(labels = scaleFUNy) +
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+g3 <- ggplot() + 
+  geom_spatvector(data = mw3all, 
+    aes(fill = surveyobs), color = NA) +
+  scale_fill_distiller("Survey\nobservations", 
+    palette = "Spectral") +
+  theme_bw() +
+  theme(legend.position = "bottom") +
+  # you can ignore this
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  expand_limits(x = ext(mw3all)[2] + 2.5) +
+  labs(x = "") +
+  scale_x_continuous(labels = scaleFUN) +
+  scale_y_continuous(labels = scaleFUNy) +
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+
+plot_grid(g1, g2, g3, nrow = 1) +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+```
+
+
+
+
+
+## We do this with `expand_limits`
+
+- If we provide `expand_limits` with a single x coordinate, it will expand the grid to include that coordinate
+- What does this code do?
+
+<br>
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: false
+#| crop: true
+
+ggplot() + 
+  geom_spatvector(data = mw3all, 
+    aes(fill = surveyobs), color = NA) +
+  scale_fill_distiller("Survey\nobservations", 
+    palette = "Spectral") +
+  theme_bw() +
+  theme(legend.position = "bottom") +
+  expand_limits(x = ext(mw3all)[2] + 2.5)
+```
+
+
+
+
+
+## Adding insets
+
+- We can use `cowplot` to add insets to our plot
+  - This is a bit tricky, but it's a nice way to show multiple levels of detail
+- Step 1:
+  - Create main plot and save (I'll save as `g1`)
+- Step 2:
+  - Create the insets and save them
+  - I'll save them as `g2` and `g3`
+- Step 3:
+  - Use `ggdraw` to add insets
+
+
+
+
+
+## Step 1: Create the main plot
+
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: false
+#| crop: true
+
+g1 <- ggplot() + 
+  geom_spatvector(data = mw3all, 
+    aes(fill = surveyobs), color = NA) +
+  scale_fill_distiller("Survey\nobservations", 
+    palette = "Spectral") +
+  theme_bw() +
+  theme(legend.position = "bottom") +
+  expand_limits(x = ext(mw3all)[2] + 2.5)
+
+```
+
+
+
+
+
+## Step 1: Create the main plot
+
+
+```{r}
+#| echo: false
+#| include: true
+#| eval: true
+#| crop: true
+#| fig-align: center
+
+ggplot() + 
+  geom_spatvector(data = mw3all, 
+    aes(fill = surveyobs), color = NA) +
+  scale_fill_distiller("Survey\nobservations", 
+    palette = "Spectral") +
+  theme_bw() +
+  theme(legend.position = "bottom") +
+  expand_limits(x = ext(mw3all)[2] + 2.5) +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+
+```
+
+
+
+
+
+## Step 2: Create the insets
+
+. . .
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: false
+#| crop: true
+
+g2 <- ggplot() + 
+  geom_spatvector(data = lilongwe, 
+    aes(fill = surveyobs), color = NA,
+    show.legend = FALSE) +
+  scale_fill_distiller("Survey\nobservations", 
+    palette = "Spectral") +
+  theme_bw() +
+  # this part is important!
+  theme(plot.background = element_rect(fill = "transparent", color = "transparent")) +
+  theme(axis.title.x = element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank()) +
+  theme(axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())
+
+```
+
+
+
+
+
+## Step 2: Create the insets
+
+```{r}
+#| echo: false
+#| include: true
+#| eval: true
+#| crop: true
+#| fig-align: center
+
+ggplot() + 
+  geom_spatvector(data = lilongwe, 
+    aes(fill = surveyobs), color = NA,
+    show.legend = FALSE) +
+  scale_fill_distiller("Survey\nobservations", 
+    palette = "Spectral") +
+  theme_bw() +
+  theme(axis.title.x = element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank()) +
+  theme(axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank()) +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+
+```
+
+
+
+
+
+## Step 2: Create the insets
+
+- Go ahead and do it for Blantyre
+
+. . .
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: false
+#| crop: true
+
+g3 <- ggplot() + 
+  geom_spatvector(data = blantyre, 
+    aes(fill = surveyobs), color = NA,
+    show.legend = FALSE) +
+  scale_fill_distiller("Survey\nobservations", 
+    palette = "Spectral") +
+  theme_bw() +
+  theme(axis.title.x = element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank()) +
+  theme(axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank()) +
+  theme(plot.background = element_rect(fill = "transparent", color = "transparent"))
+
+```
+
+
+
+
+
+## Step 2: Create the insets
+
+```{r}
+#| echo: false
+#| include: true
+#| eval: true
+#| crop: true
+#| fig-align: center
+
+ggplot() + 
+  geom_spatvector(data = blantyre, 
+    aes(fill = surveyobs), color = NA,
+    show.legend = FALSE) +
+  scale_fill_distiller("Survey\nobservations", 
+    palette = "Spectral") +
+  theme_bw() +
+  theme(axis.title.x = element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank()) +
+  theme(axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank()) +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+
+```
+
+
+
+
+
+
+## Step 3: Add insets with `ggdraw`
+
+
+```{r}
+#| asis: true
+#| eval: false
+#| echo: true
+ggdraw(g1) +
+  draw_plot(g2 + theme(legend.position = "none"), 
+    x = ??, y = ??, height = ??, width = ??) +
+  draw_plot(g3 + theme(legend.position = "none"), 
+    x = ??, y = ??, height = ??, width = ??)
+```
+  
+  
+- This is where the experimentation comes in!
+  - All the `??` values need to be between 0 and 1
+  - They represent proportions of the plot
+  - The `legend.position = "none"` is just to make sure it's not there!
+  
+- Give it a try. See if you can come up with a good combination!
+  - I'll show you what I did in a minute
+
+
+
+
+
+
+## Step 3: Add insets with `ggdraw`
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: false
+
+ggdraw(g1) +
+  draw_plot(g2, x = 0.425, y = 0.6, height = 0.275, width = 0.275) +
+  draw_plot(g3, x = 0.485, y = 0.23, height = 0.275, width = 0.2) +
+
+```
+
+
+
+
+
+
+## Step 3: Add insets with `ggdraw`
+```{r}
+#| echo: false
+#| include: true
+#| eval: true
+#| crop: true
+#| fig-align: center
+
+g1 <- ggplot() + 
+  geom_spatvector(data = mw3all, 
+    aes(fill = surveyobs), color = NA) +
+  scale_fill_distiller("Survey\nobservations", 
+    palette = "Spectral") +
+  theme_bw() +
+  theme(legend.position = "bottom") +
+  expand_limits(x = ext(mw3all)[2] + 2.5)
+g2 <- ggplot() + 
+  geom_spatvector(data = lilongwe, 
+    aes(fill = surveyobs), color = NA,
+    show.legend = FALSE) +
+  scale_fill_distiller("Survey\nobservations", 
+    palette = "Spectral") +
+  theme_bw() +
+  # this part is important!
+  theme(plot.background = element_rect(fill = "transparent", color = "transparent")) +
+  theme(axis.title.x = element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank()) +
+  theme(axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())
+g3 <- ggplot() + 
+  geom_spatvector(data = blantyre, 
+    aes(fill = surveyobs), color = NA,
+    show.legend = FALSE) +
+  scale_fill_distiller("Survey\nobservations", 
+    palette = "Spectral") +
+  theme_bw() +
+  theme(axis.title.x = element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank()) +
+  theme(axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank()) +
+  theme(plot.background = element_rect(fill = "transparent", color = "transparent"))
+
+ggdraw(g1) +
+  draw_plot(g2 + theme(legend.position = "none"), x = 0.425, y = 0.7, height = 0.275, width = 0.275) +
+  draw_plot(g3 + theme(legend.position = "none"), x = 0.475, y = 0.3, height = 0.275, width = 0.2) +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+
+```
+
+
+
+
+
+
+## This still isn't quite right
+
+- There are still some changes to make
+  - Can you spot them?
+  
+. . .
+
+- The legend for Blantyre is wrong!
+- Let's delete the "x" axis label
+- Let's put the legend title on top
+- Add subtitles for Blantyre and Lilongwe
+
+
+
+
+
+
+## The Blantyre legend - what's the difference?
+
+```{r}
+#| echo: false
+#| include: true
+#| eval: true
+#| crop: true
+#| fig-align: center
+
+g1 <- ggplot() + 
+  geom_spatvector(data = blantyre, 
+    aes(fill = surveyobs), color = NA) +
+  scale_fill_distiller("Survey\nobservations", 
+    palette = "Spectral") +
+  theme_bw() +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+g2 <- ggplot() + 
+  geom_spatvector(data = blantyre, 
+    aes(fill = surveyobs), color = NA) +
+  scale_fill_distiller("Survey\nobservations", 
+    palette = "Spectral", 
+    limits = c(min(mw3all$surveyobs), max(mw3all$surveyobs))) +
+  theme_bw() +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+
+plot_grid(g1, g2) +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+
+```
+
+
+
+
+
+
+## Using `limits` in `scale_fill_distiller`
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: false
+#| crop: true
+#| fig-align: center
+
+g3 <- ggplot() + 
+  geom_spatvector(data = blantyre, 
+    aes(fill = surveyobs), color = NA) +
+  scale_fill_distiller("Survey\nobservations", 
+    palette = "Spectral", 
+    limits = c(min(mw3all$surveyobs), max(mw3all$surveyobs))) +
+  theme_bw()
+
+```
+
+
+- This also works with all the other `scale_` options
+  - `scale_fill_brewer`, `scale_color_brewer`, etc.
+  
+
+
+
+## Delete the x-axis label
+
+```{r}
+#| echo: false
+#| include: true
+#| eval: true
+#| crop: true
+#| fig-align: center
+
+ggplot() + 
+  geom_spatvector(data = mw3all, 
+    aes(fill = surveyobs), color = NA) +
+  scale_fill_distiller("Survey\nobservations", 
+    palette = "Spectral") +
+  theme_bw() +
+  theme(legend.position = "bottom") +
+  expand_limits(x = ext(mw3all)[2] + 2.5) +
+  theme(axis.title.x = element_blank()) +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+```
+  
+
+
+
+## Delete the x-axis label
+
+- See if you can find an answer on Google!
+  - There are a couple possible ways to do it
+  
+. . .
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: false
+#| crop: true
+#| fig-align: center
+
+g1 <- ggplot() + 
+  geom_spatvector(data = mw3all, 
+    aes(fill = surveyobs), color = NA) +
+  scale_fill_distiller("Survey\nobservations", 
+    palette = "Spectral") +
+  theme_bw() +
+  theme(legend.position = "bottom") +
+  expand_limits(x = ext(mw3all)[2] + 2.5) +
+  theme(axis.title.x = element_blank())
+
+```
+  
+
+
+
+## Finally, move legend title to top
+
+```{r}
+#| echo: false
+#| include: true
+#| eval: true
+#| crop: true
+#| fig-align: center
+
+ggplot() + 
+  geom_spatvector(data = mw3all, 
+    aes(fill = surveyobs), color = NA) +
+  scale_fill_distiller("Survey\nobservations", 
+    palette = "Spectral") +
+  theme_bw() +
+  theme(legend.position = "bottom") +
+  expand_limits(x = ext(mw3all)[2] + 2.5) +
+  theme(axis.title.x = element_blank()) +
+  guides(fill = guide_colorbar(title.position="top", title.hjust = 0.5)) +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+```
+  
+
+
+
+## Finally, move legend title to top
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: false
+#| crop: true
+#| fig-align: center
+
+g1 <- ggplot() + 
+  geom_spatvector(data = mw3all, 
+    aes(fill = surveyobs), color = NA) +
+  scale_fill_distiller("Survey\nobservations", 
+    palette = "Spectral") +
+  theme_bw() +
+  theme(legend.position = "bottom") +
+  expand_limits(x = ext(mw3all)[2] + 2.5) +
+  theme(axis.title.x = element_blank()) +
+  guides(fill = guide_colorbar(title.position="top", title.hjust = 0.5))
+```
+
+- Note that if it's a color instead of a fill, should be `color =` instead of `fill =`
+  
+
+
+
+## Adding titles for the insets
+
+- How do you add a title to Blantyre and Lilongwe?
+  - Note that I use `subtitle` here because it's a bit smaller (you could also change the text size)
+
+. . .
+
+`labs(subtitle = "Lilongwe")`
+
+`labs(subtitle = "Blantyre")`
+  
+
+
+
+## One more small change: the width of the legend
+
+`theme(legend.key.width = unit(0.5, "inches"))`
+
+
+
+## Putting it all together
+```{r}
+#| echo: false
+#| include: true
+#| eval: true
+#| crop: true
+#| fig-align: center
+
+g1 <- ggplot() + 
+  geom_spatvector(data = mw3all, 
+    aes(fill = surveyobs), color = NA) +
+  scale_fill_distiller("Survey\nobservations", 
+    palette = "Spectral") +
+  theme_bw() +
+  theme(legend.position = "bottom") +
+  expand_limits(x = ext(mw3all)[2] + 2.5) +
+  theme(axis.title.x = element_blank(),
+    theme(legend.key.width = unit(0.5, "inches"))) +
+  guides(fill = guide_colorbar(title.position="top", title.hjust = 0.5))
+g2 <- ggplot() + 
+  geom_spatvector(data = lilongwe, 
+    aes(fill = surveyobs), color = NA,
+    show.legend = FALSE) +
+  scale_fill_distiller("Survey\nobservations", 
+    palette = "Spectral") +
+  theme_bw() +
+  labs(subtitle = "Lilongwe") +
+  # this part is important!
+  theme(plot.background = element_rect(fill = "transparent", color = "transparent")) +
+  theme(axis.title.x = element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank()) +
+  theme(axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())
+g3 <- ggplot() + 
+  geom_spatvector(data = blantyre, 
+    aes(fill = surveyobs), color = NA) +
+  scale_fill_distiller("Survey\nobservations", 
+    palette = "Spectral", 
+    limits = c(min(mw3all$surveyobs), max(mw3all$surveyobs))) +
+  theme_bw() +
+  labs(subtitle = "Blantyre") +
+  theme(axis.title.x = element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank()) +
+  theme(axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank()) +
+  theme(plot.background = element_rect(fill = "transparent", color = "transparent"))
+
+ggdraw(g1) +
+  draw_plot(g2 + theme(legend.position = "none"), x = 0.425, y = 0.7, height = 0.275, width = 0.275) +
+  draw_plot(g3 + theme(legend.position = "none"), x = 0.475, y = 0.3, height = 0.275, width = 0.2) +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+
+```
+
+
+
+
+
+# Intersections and spatial joins
+
+## Let's move on to a new topic
+
+- Here's our goal:
+  - We want to count the number of points in each polygon
+  - We want to count points in each ADMIN2 (not admin3)
+
+- We have two files: one is data with lon/lat coordinates and one is admin3 polygons
+  - We need to create a shapefile from the points
+  - We need to aggregate the admin3 to admin2
+  - We need to extract the admin2 identifier into points
+  - Then we need to join the two together
+
+
+
+## What we need
+  
+- Points: `points.csv`
+  - This is a list of health facilities in Malawi
+  - Note that this data is NOT complete (it comes from OpenStreetMap)
+
+- Polygons: `mw3allcountry.shp`
+  - Let's use the entire country
+
+
+
+## Step 1: Load the points
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: true
+#| crop: true
+#| fig-align: center
+# note that this function is in tidyverse!
+points <- read_csv("vectorfilesdata/points.csv")
+```
+
+- Find the name of the columns that represent the coordinates
+  - We'll need these to create the spatial object
+
+. . .
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: true
+#| crop: true
+#| fig-align: center
+
+# Let's turn it into a `terra` object
+points <- vect(points, geom = c("x", "y"), crs = "EPSG:4326") # these are lon/lat
+points
+```
+
+
+
+## Let's just plot the points
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: false
+#| crop: true
+#| fig-align: center
+ggplot() + 
+  geom_spatvector(data = points) +
+  theme_bw()
+```
+
+```{r}
+#| echo: false
+#| include: true
+#| eval: true
+#| crop: true
+#| fig-align: center
+ggplot() + 
+  geom_spatvector(data = points) +
+  theme_bw() +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+```
+
+
+
+## Now let's load the admin3 and aggregate
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: true
+#| crop: true
+#| fig-align: center
+adm3 <- vect("vectorfilesdata/mw3allcountry.shp")
+```
+
+- Do you remember how to aggregate to admin2?
+  - You need to use `aggregate` and the column name!
+  - Look at the column names
+
+. . .
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: true
+#| crop: true
+#| fig-align: center
+adm2 <- aggregate(adm3, "ID_2")
+```
+
+
+
+## Let's plot it
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: false
+#| crop: true
+#| fig-align: center
+ggplot() + 
+  geom_spatvector(data = adm2) +
+  theme_bw()
+```
+
+```{r}
+#| echo: false
+#| include: true
+#| eval: true
+#| crop: true
+#| fig-align: center
+ggplot() + 
+  geom_spatvector(data = adm2) +
+  theme_bw() +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+```
+
+
+
+## Time to extract
+
+- We are going to use the function `relate` to find which adm2 feature the point lies within
+  - This is a spatial join
+  - We are also going to use this to learn a bit more about `R`
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: true
+# let's first make sure it's the same CRS!
+points <- project(points, crs(adm2))
+
+join <- relate(adm2, points, "contains")
+# check the dimensions
+dim(join)
+```
+
+
+
+## The `apply` function
+
+
+```{=html}
+<table style="width:100%">
+  <caption><span data-qmd="Example data"></span></caption>
+  <thead>
+    <tr style="border-top:1px solid black">
+      <th><span data-qmd=" "></span></th>
+      <th><span data-qmd="col1"></span></th>
+      <th><span data-qmd="col2"></span></th>
+      <th><span data-qmd="col3"></span></th>
+      <th><span data-qmd="col4"></span></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Point 1</td>
+      <td style='text-align:center; vertical-align:middle'> TRUE </td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+      <td style='text-align:center; vertical-align:middle'> TRUE </td>
+    </tr>
+    <tr>
+      <td>Point 2</td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+      <td style='text-align:center; vertical-align:middle'> TRUE </td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+    </tr>
+    <tr>
+      <td>Point 3</td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+      <td style='text-align:center; vertical-align:middle'> TRUE </td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+      <td style='text-align:center; vertical-align:middle'> TRUE </td>
+    </tr>
+    <tr>
+      <td>Point 4</td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+      <td style='text-align:center; vertical-align:middle'> TRUE </td>
+      <td style='text-align:center; vertical-align:middle'> TRUE </td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+    </tr>
+    <tr>
+      <td>Point 5</td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+      <td style='text-align:center; vertical-align:middle'> TRUE </td>
+    </tr>
+    <tr>
+      <td>Point 6</td>
+      <td style='text-align:center; vertical-align:middle'> TRUE </td>
+      <td style='text-align:center; vertical-align:middle'> TRUE </td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+      <td style='text-align:center; vertical-align:middle'> TRUE </td>
+    </tr>
+  </tbody>
+</table>
+```
+
+<br>
+
+- Let's look at an example
+- An important note:
+  - If you take the `mean` of logical statements, it treats `TRUE` as 1 and `FALSE` as 0
+  - Same with `sum`
+
+
+
+## The `apply` function
+
+
+```{=html}
+<table style="width:100%">
+  <caption><span data-qmd="Example data"></span></caption>
+  <thead>
+    <tr style="border-top:1px solid black">
+      <th><span data-qmd=" "></span></th>
+      <th><span data-qmd="col1"></span></th>
+      <th><span data-qmd="col2"></span></th>
+      <th><span data-qmd="col3"></span></th>
+      <th><span data-qmd="col4"></span></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Point 1</td>
+      <td style='text-align:center; vertical-align:middle'> TRUE </td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+      <td style='text-align:center; vertical-align:middle'> TRUE </td>
+    </tr>
+    <tr>
+      <td>Point 2</td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+      <td style='text-align:center; vertical-align:middle'> TRUE </td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+    </tr>
+    <tr>
+      <td>Point 3</td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+      <td style='text-align:center; vertical-align:middle'> TRUE </td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+      <td style='text-align:center; vertical-align:middle'> TRUE </td>
+    </tr>
+    <tr>
+      <td>Point 4</td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+      <td style='text-align:center; vertical-align:middle'> TRUE </td>
+      <td style='text-align:center; vertical-align:middle'> TRUE </td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+    </tr>
+    <tr>
+      <td>Point 5</td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+      <td style='text-align:center; vertical-align:middle'> TRUE </td>
+    </tr>
+    <tr>
+      <td>Point 6</td>
+      <td style='text-align:center; vertical-align:middle'> TRUE </td>
+      <td style='text-align:center; vertical-align:middle'> TRUE </td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+      <td style='text-align:center; vertical-align:middle'> TRUE </td>
+    </tr>
+  </tbody>
+</table>
+```
+
+<br>
+
+- In this data, what happens if we:
+  - Take the `sum` of each row?
+  - What values do we get?
+
+
+
+## The `apply` function
+
+
+```{=html}
+<table style="width:100%">
+  <caption><span data-qmd="Example data"></span></caption>
+  <thead>
+    <tr style="border-top:1px solid black">
+      <th><span data-qmd=" "></span></th>
+      <th><span data-qmd="col1"></span></th>
+      <th><span data-qmd="col2"></span></th>
+      <th><span data-qmd="col3"></span></th>
+      <th><span data-qmd="col4"></span></th>
+      <th><span data-qmd="sum"></span></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Point 1</td>
+      <td style='text-align:center; vertical-align:middle'> TRUE </td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+      <td style='text-align:center; vertical-align:middle'> TRUE </td>
+      <td style='text-align:center; vertical-align:middle'> 2 </td>
+    </tr>
+    <tr>
+      <td>Point 2</td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+      <td style='text-align:center; vertical-align:middle'> TRUE </td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+      <td style='text-align:center; vertical-align:middle'> 1 </td>
+    </tr>
+    <tr>
+      <td>Point 3</td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+      <td style='text-align:center; vertical-align:middle'> TRUE </td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+      <td style='text-align:center; vertical-align:middle'> TRUE </td>
+      <td style='text-align:center; vertical-align:middle'> 2 </td>
+    </tr>
+    <tr>
+      <td>Point 4</td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+      <td style='text-align:center; vertical-align:middle'> TRUE </td>
+      <td style='text-align:center; vertical-align:middle'> TRUE </td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+      <td style='text-align:center; vertical-align:middle'> 2 </td>
+    </tr>
+    <tr>
+      <td>Point 5</td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+      <td style='text-align:center; vertical-align:middle'> TRUE </td>
+      <td style='text-align:center; vertical-align:middle'> 1 </td>
+    </tr>
+    <tr>
+      <td>Point 6</td>
+      <td style='text-align:center; vertical-align:middle'> TRUE </td>
+      <td style='text-align:center; vertical-align:middle'> TRUE </td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+      <td style='text-align:center; vertical-align:middle'> TRUE </td>
+      <td style='text-align:center; vertical-align:middle'> 3 </td>
+    </tr>
+  </tbody>
+</table>
+```
+
+. . .
+
+- We can use the `apply` function to do this!
+  - `data$sum = apply(data, 1, "sum")`
+  - This will sum each row and put it in a new column called `sum`
+  - What happens if we instead use `"mean"`?
+- The `1` denotes doing this by row... how do we apply the function by column?
+
+
+
+## The `apply` function
+
+
+```{=html}
+<table style="width:100%">
+  <caption><span data-qmd="Example data"></span></caption>
+  <thead>
+    <tr style="border-top:1px solid black">
+      <th><span data-qmd=" "></span></th>
+      <th><span data-qmd="col1"></span></th>
+      <th><span data-qmd="col2"></span></th>
+      <th><span data-qmd="col3"></span></th>
+      <th><span data-qmd="col4"></span></th>
+      <th><span data-qmd="mean"></span></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Point 1</td>
+      <td style='text-align:center; vertical-align:middle'> TRUE </td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+      <td style='text-align:center; vertical-align:middle'> TRUE </td>
+      <td style='text-align:center; vertical-align:middle'> 0.5 </td>
+    </tr>
+    <tr>
+      <td>Point 2</td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+      <td style='text-align:center; vertical-align:middle'> TRUE </td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+      <td style='text-align:center; vertical-align:middle'> 0.25 </td>
+    </tr>
+    <tr>
+      <td>Point 3</td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+      <td style='text-align:center; vertical-align:middle'> TRUE </td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+      <td style='text-align:center; vertical-align:middle'> TRUE </td>
+      <td style='text-align:center; vertical-align:middle'> 0.5 </td>
+    </tr>
+    <tr>
+      <td>Point 4</td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+      <td style='text-align:center; vertical-align:middle'> TRUE </td>
+      <td style='text-align:center; vertical-align:middle'> TRUE </td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+      <td style='text-align:center; vertical-align:middle'> 0.5 </td>
+    </tr>
+    <tr>
+      <td>Point 5</td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+      <td style='text-align:center; vertical-align:middle'> TRUE </td>
+      <td style='text-align:center; vertical-align:middle'> 0.25 </td>
+    </tr>
+    <tr>
+      <td>Point 6</td>
+      <td style='text-align:center; vertical-align:middle'> TRUE </td>
+      <td style='text-align:center; vertical-align:middle'> TRUE </td>
+      <td style='text-align:center; vertical-align:middle'> FALSE </td>
+      <td style='text-align:center; vertical-align:middle'> TRUE </td>
+      <td style='text-align:center; vertical-align:middle'> 0.75 </td>
+    </tr>
+  </tbody>
+</table>
+```
+
+<br>
+
+`data$mean = apply(data, 1, "mean")`
+
+
+
+## Back to our data
+
+- Check the dimensions of the data
+  - What do rows and what do columns represent?
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: true
+#| class-output: hscroll
+dim(join)
+join
+```
+
+
+
+## How do we use `apply` here?
+
+- So the columns are POINTS and the rows are POLYGONS (adm2)
+- What do we want to do?
+
+. . .
+
+- We want to find the number of points in each polygon
+  - It is `TRUE/FALSE` so we want to `sum` BY rows!
+
+
+
+## How do we use `apply` here?
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: true
+#| class-output: hscroll
+
+adm2$points = apply(join, 1, "sum")
+adm2$points
+```
+
+
+
+## Now we can graph it!
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: false
+
+ggplot() + 
+  geom_spatvector(data = adm2, aes(fill = points)) +
+  scale_fill_distiller("Number of\npoints", palette = "Spectral") +
+  theme_bw()
+```
+
+```{r}
+#| echo: false
+#| include: true
+#| eval: true
+#| fig-align: center
+#| crop: true
+ggplot() + 
+  geom_spatvector(data = adm2, aes(fill = points)) +
+  scale_fill_distiller("Number of\npoints", palette = "Spectral") +
+  theme_bw() +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+```
+
+
+
+## Make it a little nicer
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: false
+
+ggplot() + 
+  geom_spatvector(data = adm2, aes(fill = points), color = NA) +
+  scale_fill_distiller("Number of\npoints", palette = "Spectral") +
+  theme_bw()
+```
+
+```{r}
+#| echo: false
+#| include: true
+#| eval: true
+#| fig-align: center
+#| crop: true
+
+ggplot() + 
+  geom_spatvector(data = adm2, aes(fill = points), color = NA) +
+  scale_fill_distiller("Number of\npoints", palette = "Spectral") +
+  theme_bw() +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+```
+
+
+
+
+
+## Now it's your turn!
+
+- I have uploaded a map of Korea
+  - It is at the shi/gun/gu (시군구) level
+  - It is called `kcities.shp` (also a .zip there)
+- I have also uploaded a list of points
+  - These are train stations
+  - It is called `krail.csv`
+- Your task: Find how many train stations there are in each feature!
+  - Then map it
+- I'll give you 10-15 minutes
+  - Then I'll open a script and we'll do it together
+
+
+
+
+
+
+## Calculating areas and lengths
+
+- We can also calculate areas and lengths!
+
+- `perim` for length
+  - For polygons, it returns the length of the perimeter
+  - For lines, it returns the length of the line
+  
+- `expanse` for area
+  - Returns the area of polygons
+  - What will it return for lines or points?
+
+- Believe it or not, using lon/lat gives the most accurate results!
+  - This is because of the [haversine formula](https://en.wikipedia.org/wiki/Haversine_formula)
+
+
+
+
+
+## Area
+
+- Let's use the `adm3` shapefile
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: true
+#| fig-align: center
+#| crop: true
+
+adm3$area <- expanse(adm3, unit="km", transform = TRUE)
+```
+
+- Unit: do you want $km^2$ or $m^2$?
+- Transform: automatically transform to lon/lat?
+  - Always do this. `terra` documentation says this will be more accurate
+
+
+
+
+
+## Area
+
+```{r}
+#| echo: false
+#| include: true
+#| eval: true
+#| fig-align: center
+#| crop: true
+
+ggplot() + 
+  geom_spatvector(data = adm3, aes(fill = log(area)), color = NA) +
+  scale_fill_distiller("Area\n(log sq km)", palette = "Spectral") +
+  theme_bw() +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+```
+
+
+
+
+
+## Perimeter
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: true
+#| fig-align: center
+#| crop: true
+
+adm3$perimeter <- perim(adm3 |> project("EPSG:4326"))
+```
+
+<br>
+
+- This automatically gives length in meters
+- You can add `project` with a pipe operator `|>` to transform to lon/lat
+
+
+
+
+
+## Perimeter
+
+```{r}
+#| echo: false
+#| include: true
+#| eval: true
+#| fig-align: center
+#| crop: true
+
+ggplot() + 
+  geom_spatvector(data = adm3, aes(fill = log(perimeter)), color = NA) +
+  scale_fill_distiller("Perimeter\n(log km)", palette = "Spectral") +
+  theme_bw() +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+```
+
+
+
+
+
+## More distances
+
+- We have points for households
+- We have points for health facilities
+
+- We can calculate the distance between each household and each health facility
+  - Finding distances between points is a common GIS task!
+
+
+
+
+
+## Distance matrix
+
+- The name of the households data is `households.dta`
+  - This is a Stata dataset
+  - You can read it using the package `haven`
+  
+- Please go ahead and try loading the dataset and then turning it into a `terra` object
+  - You'll have to find the names of the columns that represent the coordinates
+
+
+
+
+
+## Distance matrix
+  
+```{r}
+#| echo: true
+#| include: true
+#| eval: true
+#| fig-align: center
+#| crop: true
+# households
+households <- read_dta("vectorfilesdata/households.dta")
+households <- vect(households, geom = c("ea_lon_mod", "ea_lat_mod"), crs = "EPSG:4326")
+# health facilities
+# do it in one line!
+health <- vect(read_csv("vectorfilesdata/points.csv"), geom = c("x", "y"), crs = "EPSG:4326")
+```
+
+
+
+
+
+## Distance matrix
+  
+```{r}
+#| echo: true
+#| include: true
+#| eval: true
+#| fig-align: center
+#| crop: true
+
+distances <- distance(households, health)
+dim(households)
+dim(health)
+dim(distances)
+```
+
+
+
+
+
+## Distance matrix - "Heat map"
+
+```{r}
+#| echo: false
+#| include: true
+#| eval: true
+#| fig-align: center
+#| crop: true
+
+
+distances <- as_tibble(distances)
+distances$hhid <- 1:nrow(distances)
+# pivot longer
+distances <- pivot_longer(distances, -hhid, names_to = "facility", values_to = "distance")
+distances$facility <- as.numeric(substr(distances$facility, 2, str_length(distances$facility)))
+
+ggplot(distances) + 
+  geom_tile(aes(x = hhid, y = facility, fill = distance/1000), color = NA) +
+  scale_fill_distiller("Distances\n(km)", palette = "Spectral") +
+  theme_bw() +
+  labs(x = "Households", y = "Health facilities") +
+  theme(axis.text.x=element_blank(),
+        axis.ticks.x=element_blank()) +
+  theme(axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())
+```
+
+
+
+
+
+## Closest health facility by household
+
+```{r}
+#| echo: false
+#| include: true
+#| eval: true
+#| fig-align: center
+#| crop: true
+
+distances <- distances |>
+  group_by(hhid) |>
+  summarize(distance = min(distance)) |>
+  ungroup()
+households$distance <- distances$distance
+ggplot() + 
+  geom_spatvector(data = households, aes(color = distance/1000), size = 0.5) +
+  scale_color_distiller("Distances\n(km)", palette = "Spectral") +
+  theme_bw() +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+```
+
+
+
+
+
+## How did I create the map?
+
+- The `distances` object is a matrix
+  - What are the rows and what are the columns?
+
+. . .
+
+- If we want to find the closest health facility to each household, what do we need to do?
+  - We need to find the minimum distance for each row
+  - Do you remember?
+
+
+
+
+
+## Closest health facility by household
+
+- We can use the `apply` function!
+  - But with `"min"` instead of `"sum"`
+  - The rows are in the same order as the households, so...
+  
+. . .
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: false
+#| fig-align: center
+#| crop: true
+
+distances <- distance(households, health)
+closest <- apply(distances, 1, "min")
+
+# they're in the same order!
+households$closest <- closest
+
+ggplot() + 
+  geom_spatvector(data = households, aes(color = closest/1000), size = 0.5) +
+  scale_color_distiller("Distances\n(km)", palette = "Spectral") +
+  theme_bw()
+```
+  
+
+
+
+
+# More advanced operations
+
+## Let's go over some more advanced operations
+
+- This stuff will spillover into next week
+
+- First up:
+  - Spatial overlap
+
+
+
+
+
+
+
+## A grid in Korea - `kgrid.zip`
+
+```{r}
+#| echo: false
+#| include: true
+#| eval: true
+#| fig-align: center
+#| crop: true
+
+
+kshape <- vect("vectorfilesdata/kshape.shp")
+kgrid <- vect("vectorfilesdata/kgrid.shp")
+
+ggplot() + 
+  geom_spatvector(data = kgrid, fill = NA) + 
+  theme_bw() +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+
+```
+
+
+
+
+
+
+
+## A grid in Korea - `kgrid.zip`
+
+- We will discuss how to make a grid after we learn about rasters
+
+- For now, the grid is a shapefile
+
+- A very common operation:
+  - We want to know which province/city each grid cell is in
+  - This isn't straightforward. Why?
+
+. . .
+
+- A grid cell can overlap multiple provinces/cities
+
+
+
+
+
+
+
+## The data
+
+- Here is the data:
+  - `kshape.shp` is the shapefile of the provinces/cities
+  - `kgrid.shp` is the grid
+  - I have uploaded .zip files for both
+
+<br>
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: true
+#| fig-align: center
+#| crop: true
+kshape <- vect("vectorfilesdata/kshape.shp")
+kgrid <- vect("vectorfilesdata/kgrid.shp")
+kgrid
+```
+
+
+
+
+
+
+
+## The `intersect` function from `terra`
+
+- We are going to use the `intersect` function
+
+- Here's what it will do:
+  - It will find the intersection of the grid cell and the province/city
+  - Except, it will return a new feature for EACH overlap
+  
+- Let's look at some maps
+
+
+
+## The `intersect` function from `terra`
+
+```{r}
+#| echo: false
+#| include: true
+#| eval: true
+#| fig-align: center
+#| crop: true
+g1 <- ggplot() + 
+  geom_spatvector(data = kshape, fill = NA) +
+  theme_bw() +
+  labs(subtitle = "A. Provinces/cities") +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+g2 <- ggplot() + 
+  geom_spatvector(data = kgrid, fill = NA) +
+  theme_bw() +
+  labs(subtitle = "B. Grids") +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+plot_grid(g1, g2) +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+
+```
+
+
+
+## The `intersect` function from `terra`
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: true
+#| fig-align: center
+#| crop: true
+
+intersection <- intersect(kgrid, kshape)
+intersection
+kgrid
+
+```
+
+
+
+## One grid cell, multiple overlaps
+
+```{r}
+#| echo: false
+#| include: true
+#| eval: true
+#| fig-align: center
+#| crop: true
+
+ggplot() +
+  geom_spatvector(data = intersection[intersection$id==940,]) +
+  geom_spatvector(data = kgrid[kgrid$id==940,], fill = NA) +
+  geom_spatvector(data = intersect(kshape, ext(intersection[intersection$id==940,])), aes(fill = CTP_ENG_NM)) +
+  scale_fill_brewer("Province", palette = "Set3") +
+  theme_bw() +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  coord_sf(datum = sf::st_crs(5179))
+
+```
+
+
+
+## One grid cell, multiple overlaps
+
+```{r}
+#| echo: false
+#| include: true
+#| eval: true
+#| fig-align: center
+#| crop: true
+
+intersection$area <- round(expanse(intersection)/(1000^2), 3)
+ggplot() +
+  geom_spatvector(data = intersection[intersection$id==940,], aes(fill = as.factor(area))) +
+  geom_spatvector(data = kgrid[kgrid$id==940,], fill = NA) +
+  scale_fill_brewer("Area of\noverlap\n(sq km)", palette = "Set3") +
+  theme_bw() +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) +
+  coord_sf(datum = sf::st_crs(5179))
+
+```
+
+
+
+## Area of overlap
+
+- So what do we want to do?
+  - Let's find the area of overlap for each grid cell and each province/city
+  - Then let's take the LARGEST overlap and assign that to the grid cell
+  - In practice, depending on the context, you could use a weighted mean or something else
+    - This won't work with categorical variables, though
+    
+```{r}
+#| echo: true
+#| include: true
+#| eval: true
+#| fig-align: center
+#| crop: true
+# Get area of all overlaps
+intersection$area <- expanse(intersection)
+# turn it into a tibble
+intersection <- as_tibble(intersection)
+# Get the largest overlap
+intersection <- intersection |> group_by(id) |> filter(area==max(area)) |> ungroup()
+
+```
+
+
+
+## Area of overlap
+
+    
+```{r}
+#| echo: true
+#| include: true
+#| eval: true
+#| fig-align: center
+#| crop: true
+intersection
+kgrid
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+

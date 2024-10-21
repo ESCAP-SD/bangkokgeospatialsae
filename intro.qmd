@@ -44,11 +44,34 @@ data <- read_csv("introdata/data.csv")
 
 ## Introduction
 
-- Course website: [https://github.com/ESCAP-SD/bangkokworkshops](https://github.com/ESCAP-SD/bangkokworkshops)
+- Course website: [https://github.com/ESCAP-SD/bangkokgeospatialsae](https://github.com/ESCAP-SD/bangkokgeospatialsae)
   - I strongly recommend you have this website open during the workshop
 
 - I will often use data from the website
   - Today is the "intro" section
+  
+  
+
+## General outline
+
+- Today: starting easy!
+  - Review of everyone's experiences with R/SAE
+  - Hopes for the workshop? Goals?
+  
+. . .
+
+- Tomorrow: Vector files (shapefiles)
+  
+. . .
+
+- Wednesday: Rasters
+  - Using rasters
+  - Finding raster files
+  
+. . .
+
+- Thursday
+  - SAE: Putting it all together
 
 
 
