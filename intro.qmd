@@ -44,7 +44,8 @@ data <- read_csv("introdata/data.csv")
 
 ## Introduction
 
-- Course website: [https://github.com/ESCAP-SD/bangkokgeospatialsae](https://github.com/ESCAP-SD/bangkokgeospatialsae)
+
+- Course website: [https://github.com/ESCAP-SD/bangkokgeospatialsae](https://github.com/ESCAP-SD/bangkokgeospatialsae) 
   - I strongly recommend you have this website open during the workshop
 
 - I will often use data from the website

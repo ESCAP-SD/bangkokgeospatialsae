@@ -5,7 +5,7 @@
 
 - You can find the slides in the following locations:
   - Introduction (SAE and R)
-    - [Intro slides](https://escap-sd.github.io/bangkokworkshops/intro.html)
+    - [Intro slides](https://escap-sd.github.io/bangkokgeospatialsae/intro.html)
   - Vector data (shapefiles) and coordinate reference systems
     - Vector data slides
   - Raster data
