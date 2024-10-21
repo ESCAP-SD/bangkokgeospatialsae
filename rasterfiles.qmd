@@ -72,6 +72,7 @@ kdisgray <- "#A7A9AC"
 #| echo: false
 #| include: true
 #| fig-align: center
+#| crop: true
 # create example grid
 main <- ggplot() +
   geom_hline(yintercept = 1:10, color = "black") +
@@ -79,7 +80,9 @@ main <- ggplot() +
   theme_bw() +
   labs(x = "X", y = "Y") +
   scale_x_continuous(breaks = 1:10, minor_breaks = NULL) +
-  scale_y_continuous(breaks = 1:10, minor_breaks = NULL)
+  scale_y_continuous(breaks = 1:10, minor_breaks = NULL) + 
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) + 
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
 
 gridexample <- ggdraw() +
   draw_plot(
@@ -88,10 +91,14 @@ gridexample <- ggdraw() +
         coord_sf(
           xlim = c(0.99, 10.01),
           ylim = c(0.99, 10.01),
-          expand = FALSE)
+          expand = FALSE) + 
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) + 
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
     }
 )
-gridexample
+gridexample + 
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) + 
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
 ```
 
 
@@ -108,10 +115,13 @@ gridexample
 ```{r}
 #| echo: false
 #| include: true
+#| crop: true
 #| fig-align: center
 
 
-gridexample
+gridexample + 
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) + 
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
 ```
 
 
@@ -147,6 +157,7 @@ gridexample
 ```{r}
 #| echo: false
 #| include: true
+#| crop: true
 #| fig-align: center
 
 library(tidyterra)
@@ -157,7 +168,9 @@ ggplot() +
   geom_spatraster(data = tif, ) + 
   scale_fill_distiller("Population\ncount", palette = "Spectral", na.value = "white") +
   theme_bw() +
-  labs(subtitle = "Population in Cotonou, Benin")
+  labs(subtitle = "Population in Cotonou, Benin") + 
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) + 
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
 
 ```
 
@@ -178,6 +191,7 @@ ggplot() +
 #| echo: false
 #| include: true
 #| fig-align: center
+#| crop: true
 
 tif
 
@@ -214,6 +228,7 @@ tif
 #| echo: true
 #| include: true
 #| fig-align: center
+#| crop: true
 library(terra)
 
 # this is the raster for Cotonou, Benin
@@ -241,10 +256,14 @@ cotonou
 #| echo: true
 #| eval: false
 #| fig-align: center
+#| crop: true
 library(tidyterra)
 
 ggplot() +
-  geom_spatraster(data = cotonou)
+  geom_spatraster(data = cotonou) + 
+  theme_bw() +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) + 
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
 ```
 
 :::
@@ -255,10 +274,13 @@ ggplot() +
 #| echo: false
 #| include: true
 #| fig-align: center
+#| crop: true
 library(tidyterra)
 
 ggplot() +
-  geom_spatraster(data = cotonou)
+  geom_spatraster(data = cotonou) + 
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) + 
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
 ```
 
 :::
@@ -279,6 +301,7 @@ ggplot() +
 #| echo: true
 #| eval: false
 #| fig-align: center
+#| crop: true
 library(tidyterra)
 
 ggplot() +
@@ -289,7 +312,9 @@ ggplot() +
   scale_fill_distiller("Population\ncount", 
     palette = "Spectral", na.value = "white") +
   theme_bw() +
-  labs(subtitle = "Population in Cotonou, Benin")
+  labs(subtitle = "Population in Cotonou, Benin") + 
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) + 
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
 ```
 
 :::
@@ -300,13 +325,16 @@ ggplot() +
 #| echo: false
 #| include: true
 #| fig-align: center
+#| crop: true
 library(tidyterra)
 
 ggplot() +
   geom_spatraster(data = cotonou) + 
   scale_fill_distiller("Population\ncount", palette = "Spectral", na.value = "white") +
   theme_bw() +
-  labs(subtitle = "Population in Cotonou, Benin")
+  labs(subtitle = "Population in Cotonou, Benin") + 
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) + 
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
 
 ```
 
@@ -347,6 +375,7 @@ ggplot() +
 #| eval: false
 #| fig-align: center
 #| code-fold: show
+#| crop: true
 
 tif <- rast("rastersdata/mwpop.tif")
 
@@ -355,14 +384,33 @@ ggplot() +
   scale_fill_distiller("Population\ncount", 
     palette = "Spectral", na.value = "white") +
   theme_bw() +
-  labs(subtitle = "Population in Northern Malawi")
+  labs(subtitle = "Population in Northern Malawi") + 
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) + 
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
 ```
 
 :::
 
 ::: {.column width="55%"}
 
-![](rastersassets/mwpop.png){fig-align="center"}
+```{r}
+#| echo: false
+#| eval: true
+#| fig-align: center
+#| code-fold: show
+#| crop: true
+
+tif <- rast("rastersdata/mwpop.tif")
+
+ggplot() +
+  geom_spatraster(data = tif) + 
+  scale_fill_distiller("Population\ncount", 
+    palette = "Spectral", na.value = "white") +
+  theme_bw() +
+  labs(subtitle = "Population in Northern Malawi") + 
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) + 
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+```
 
 :::
 :::
@@ -387,6 +435,7 @@ ggplot() +
 #| eval: false
 #| fig-align: center
 #| code-fold: show
+#| crop: true
 
 tif <- rast("rastersdata/mwpop.tif")
 
@@ -395,14 +444,33 @@ ggplot() +
   scale_fill_distiller("Population\ncount (log)", 
     palette = "Spectral", na.value = "white") +
   theme_bw() +
-  labs(subtitle = "Population in Northern Malawi")
+  labs(subtitle = "Population in Northern Malawi") + 
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) + 
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
 ```
 
 :::
 
 ::: {.column width="55%"}
 
-![](rastersassets/mwpop2.png){fig-align="center"}
+```{r}
+#| echo: false
+#| eval: true
+#| fig-align: center
+#| code-fold: show
+#| crop: true
+
+tif <- rast("rastersdata/mwpop.tif")
+
+ggplot() +
+  geom_spatraster(data = log(tif)) + 
+  scale_fill_distiller("Population\ncount (log)", 
+    palette = "Spectral", na.value = "white") +
+  theme_bw() +
+  labs(subtitle = "Population in Northern Malawi") + 
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) + 
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+```
 
 :::
 :::
@@ -419,6 +487,7 @@ ggplot() +
 #| echo: false
 #| eval: true
 #| fig-align: center
+#| crop: true
 
 tif <- rast("rastersdata/mwpop.tif")
 adm4 <- read_sf("rastersdata/mw4.shp")
@@ -428,13 +497,19 @@ g1 <- ggplot() +
   scale_fill_distiller("Population\ncount (log)", 
     palette = "Spectral", na.value = "white") +
   theme_bw() +
-  labs(subtitle = "Population in Northern Malawi")
+  labs(subtitle = "Population in Northern Malawi") + 
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) + 
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
 g2 <- ggplot() +
   geom_sf(data = adm4, color = "black", fill = "transparent", lwd = 0.1) + 
   theme_bw() +
-  labs(subtitle = "EAs (admin4) Northern Malawi")
+  labs(subtitle = "EAs (admin4) Northern Malawi") + 
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) + 
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
 
-plot_grid(g1, NA, g2, ncol = 3, rel_widths = c(1, 0.05, 1))
+plot_grid(g1, NA, g2, ncol = 3, rel_widths = c(1, 0.05, 1)) + 
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) + 
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
 ```
 
 
@@ -450,6 +525,7 @@ plot_grid(g1, NA, g2, ncol = 3, rel_widths = c(1, 0.05, 1))
 #| eval: false
 #| include: true
 #| fig-align: center
+#| crop: true
 library(exactextractr)
 
 tif <- rast("rastersdata/mwpop.tif")
@@ -468,6 +544,7 @@ extracted <- exact_extract(tif, adm4, fun = "sum", append_cols = "EA_CODE")
 #| eval: true
 #| include: false
 #| fig-align: center
+#| crop: true
 library(exactextractr)
 
 tif <- rast("rastersdata/mwpop.tif")
@@ -488,6 +565,7 @@ write_csv(extracted |> rename(pop = sum), "rastersdata/mwpopEAs.csv")
 #| eval: true
 #| include: true
 #| fig-align: center
+#| crop: true
 
 head(extracted)
 ```
@@ -510,6 +588,7 @@ head(extracted)
 #| eval: false
 #| include: true
 #| fig-align: center
+#| crop: true
 
 # join
 adm4 <- adm4 |>
@@ -522,7 +601,9 @@ ggplot() +
   scale_fill_distiller("Population\ncount", 
     palette = "Spectral", na.value = "white") +
   theme_bw() +
-  labs(subtitle = "Population in EAs")
+  labs(subtitle = "Population in EAs") + 
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) + 
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
 
 ```
 
@@ -1052,6 +1133,7 @@ x
 ```{r}
 #| eval: false
 #| echo: true
+#| crop: true
 adm4 <- read_sf("rastersdata/mw4.shp")
 ggplot() +
   geom_spatraster(data = x) +
@@ -1063,7 +1145,9 @@ ggplot() +
     alpha = 0.5,
     fill = "transparent") +
   theme_bw() +
-  labs(subtitle = "Nightlights in Malawi")
+  labs(subtitle = "Nightlights in Malawi") + 
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) + 
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
 ```
 
 - Note what the "bounding box" does!
@@ -1073,7 +1157,25 @@ ggplot() +
 
 ::: {.column width="55%"}
 
-![](rastersassets/rgeedim1.png){fig-align="center"}
+```{r}
+#| eval: true
+#| echo: false
+#| crop: true
+adm4 <- read_sf("rastersdata/mw4.shp")
+ggplot() +
+  geom_spatraster(data = x) +
+  scale_fill_distiller("Nightlights", 
+    palette = "Spectral") +
+  geom_sf(data = adm4, 
+    color = "white",
+    lwd = 0.01,
+    alpha = 0.5,
+    fill = "transparent") +
+  theme_bw() +
+  labs(subtitle = "Nightlights in Malawi") + 
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) + 
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+```
 
 :::
 :::
@@ -1201,7 +1303,9 @@ ggplot() +
     lwd = 0.01,) +
   scale_fill_distiller("NDVI", 
     palette = "Greens", direction = 1) +
-  theme_bw()
+  theme_bw() + 
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) + 
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
 ```
 
 
