@@ -7,9 +7,9 @@
   - Introduction (SAE and R)
     - [Intro slides](https://escap-sd.github.io/bangkokgeospatialsae/intro.html)
   - Vector data (shapefiles) and coordinate reference systems
-    - Vector data slides
+    - [Vector data slides](https://escap-sd.github.io/bangkokgeospatialsae/vectorfiles.html)
   - Raster data
-    - Raster data slides
+    - [Raster data slides](https://escap-sd.github.io/bangkokgeospatialsae/rasterfiles.html)
   - SAE methods
     - SAE slides
   - Team task
