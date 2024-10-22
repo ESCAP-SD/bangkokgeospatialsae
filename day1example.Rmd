@@ -1,0 +1,29 @@
+---
+title: "Day 1 example"
+author: "Josh Merfeld"
+date: "2024-10-21"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(nycflights13)
+library(tidyverse)
+library(kableExtra)
+```
+
+
+
+
+# Day 1
+
+## First markdown example
+
+\@ref(fig:pressure) shows...
+
+```{r pressure, echo=FALSE, warning = FALSE, message = FALSE, fig.cap = "Delay by departure time"}
+ggplot() +
+  geom_smooth(data = flights, aes(x = sched_dep_time, y = dep_delay, color = origin))
+```
+
+

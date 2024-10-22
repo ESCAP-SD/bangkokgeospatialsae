@@ -1,0 +1,50 @@
+---
+title: |
+        | Practice
+# Output type and options (no TOC and yes fig captions)
+format:
+  pdf:
+    toc: false
+
+# This includes latex arguments
+header-includes:
+  - \input{header.tex}
+
+---
+
+The datasets are:
+
+  - seoulgrid.shp: a grid of 100m x 100m cells covering Seoul
+  - seoulgu.shp: the administrative districts (gu/구) of Seoul
+  - seoulrail.shp: the rail stations in Seoul
+  - seoulwater.shp: the water bodies in Seoul
+  - seoulpoints.csv: points of interest in Seoul
+
+Tasks:
+
+  - Let's start easy. The grid shapefile has a variable in it: estimated population in the grid cell (from [WorldPop](https://www.worldpop.org/)). Load the grid shapefile and plot the population distribution in Seoul. Please make the map look nice.
+    - You'll notice there are a lot of grid cells with missing values. Please write what you think might be going on there.
+  - Next, filter out any grid cells that are majority water. Plot the population distribution in Seoul again.
+    - Please write what you think the missing values are again.
+  - Finally, filter out any grid cells with zero estimated population (i.e. with a missing population value).
+  - I forgot to put the Gu identifier into the grid cells. Please add that using the seoulgu.shp file.
+    - Create a new map where grid cells are colored by the Gu they are in.
+  - A big question in urban design is where to place schools. Please load the seoulpoints.csv file.
+    - For each grid cell, find the distance to the closest elementary school, the closest middle school, and the closest high school.
+    - Create a figure with three panels, one for each of the school types, showing distance to difference school types.
+  - I would like you to create a table with the following information: 
+    - I want four columns: "Points", "Within 1km", "Within 2km", "Within 5km"
+    - I want three rows: "Elementary", "Middle", "High"
+    - I want you to calculate the proportion of the population in Seoul that is within 1km, 2km, and 5km of each school type and include it in the table.
+  - Another big question is how far people are from public transportation. Please load the seoulrail.shp file.
+    - Create a figure that shows the distribution of distances to the nearest rail stations. Please note that I am NOT asking for a map. Instead, I want something like a density plot or histogram.
+  - Access to health facilities is also an important consideration.
+    - Create a buffer of 1km around all "hospitals" in the seoulpoints.csv file.
+    - Calculate the percentage of the population in Seoul that is within 1km of a hospital.
+
+
+
+  
+
+
+
