@@ -12,6 +12,10 @@ kgridbox <- ext(kgrid)
 
 # let's pull some pollution data
 s_obj <- stac("https://planetarycomputer.microsoft.com/api/stac/v1")
+
+
+
+
 it_obj <- s_obj %>%
   stac_search(collections = "sentinel-5p-l2-netcdf",
               bbox = c(kgridbox[1], kgridbox[3], kgridbox[2], kgridbox[4]),
@@ -21,12 +25,17 @@ it_obj <- s_obj %>%
   items_sign(sign_fn = sign_planetary_computer())
 # many things!
 it_obj
+
+
+
 # let's just download the first one
 url <- paste0("/vsicurl/", it_obj$features[[1]]$assets$so2$href)
 # also get the bounding box for that area
 bb <- it_obj$features[[1]]$bbox
 # load raster
 rall <- rast(url)
+
+
 # keep just the layer we want and transform to array
 rall <- as.array(rall[["aerosol_index_340_380"]])
 # now back to raster with the appropriate extent and CRS
