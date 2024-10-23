@@ -168,7 +168,6 @@ plot_grid(g1, g2)
 # MPC
 library(rstac)
 library(terra)
-library(sf)
 
 # let's use Korea
 kgrid <- vect("vectorfilesdata/kgrid.shp")
@@ -227,7 +226,7 @@ it_obj <- s_obj %>%
               limit = 1000) %>%
   get_request() %>%
   items_sign(sign_fn = sign_planetary_computer())
-# many things!
+# fewer things here
 it_obj
 # let's just download the first one
 url <- paste0("/vsicurl/", it_obj$features[[1]]$assets$data$href)
@@ -235,10 +234,17 @@ url <- paste0("/vsicurl/", it_obj$features[[1]]$assets$data$href)
 bb <- it_obj$features[[1]]$bbox
 # load raster
 rall <- rast(url)
-# keep just the layer we want and transform to array
-rall <- as.array(rall[["52S_20190101-20200101"]])
-# now back to raster with the appropriate extent and CRS
-rall <- rast(rall, crs = "EPSG:4326", extent = ext(c(bb[1], bb[3], bb[2], bb[4])))
+
+
+
+plot(rall)
+
+
+
+
+
+
+
 
 
 
