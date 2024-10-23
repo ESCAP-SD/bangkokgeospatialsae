@@ -1,7 +1,7 @@
-// Load the desired dataset for total precipitation
-
+// nighttime lights
 var dataset = ee.ImageCollection('NOAA/VIIRS/DNB/ANNUAL_V22')
-  .filterDate('2022-01-01', '2022-12-31'); // Select only the total precipitation variable
+  .filterDate('2022-01-01', '2022-12-31')
+  .select("average_masked"); // Select only the average variable
 
 
 // Set the region to focus on (Korea)

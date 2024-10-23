@@ -1,4 +1,4 @@
-// Load the desired dataset for total precipitation
+// Load the desired dataset for land classification
 
 var dataset = ee.ImageCollection('COPERNICUS/Landcover/100m/Proba-V-C3/Global')
 .filterDate('2019-01-01', '2019-12-31'); // Select only the total precipitation variable
