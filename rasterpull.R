@@ -167,7 +167,13 @@ plot_grid(g1, g2)
 
 # MPC
 library(rstac)
+library(sf)
 
+# let's use Korea
+kgrid <- read_sf("vectorfilesdata/kgrid.shp")
+# to lon/lat
+kgrid <- st_transform(kgrid, "EPSG:4326")
+kgridbox <- st_bbox(kgrid)
 
 # let's pull some pollution data
 s_obj <- stac("https://planetarycomputer.microsoft.com/api/stac/v1")
@@ -183,13 +189,13 @@ it_obj
 # let's just download the first one
 url <- paste0("/vsicurl/", it_obj$features[[1]]$assets$so2$href)
 # also get the bounding box for that area
-bbox <- list(it_obj$features[[1]]$bbox)
+bbox <- it_obj$features[[1]]$bbox
 # load raster
 rall <- rast(url)
 # keep just the layer we want and transform to array
 rall <- as.array(rall[["aerosol_index_340_380"]])
 # now back to raster with the appropriate extent and CRS
-rall <- rast(rall, crs = "EPSG:4326", extent = ext(c(bbox[[1]][1], bbox[[1]][3], bbox[[1]][2], bbox[[1]][4])))
+rall <- rast(rall, crs = "EPSG:4326", extent = bbox[[1]])
 
 # extract to grids
 extractpol <- exact_extract(rall, kgrid, fun = "mean", append_cols = "id")
