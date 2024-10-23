@@ -52,6 +52,15 @@ kdisgray <- "#A7A9AC"
 
 
 
+## Goal
+
+- By the end of the day, we want to be able to:
+  - Use geospatial data to estimate a sub-area model
+  - We won't actually do that today, we'll do that tomorrow
+  - Today focus is getting ALL of the data we need
+
+
+
 ## Rasters
 
 - We've discussed shapefiles
@@ -366,7 +375,7 @@ ggplot() +
 ## Give it a try
 
 ::: columns
-::: {.column width="45%"}
+::: {.column width="50%"}
 
 - Try to load it into R using terra, then plot it with tidyterra and ggplot
 
@@ -391,7 +400,7 @@ ggplot() +
 
 :::
 
-::: {.column width="55%"}
+::: {.column width="50%"}
 
 ```{r}
 #| echo: false
@@ -424,7 +433,7 @@ ggplot() +
 ## Give it a try
 
 ::: columns
-::: {.column width="45%"}
+::: {.column width="50%"}
 
 - I actually don't like that map! It's too hard to see because of all the low values.
 - So let's take logs, instead!
@@ -451,7 +460,7 @@ ggplot() +
 
 :::
 
-::: {.column width="55%"}
+::: {.column width="50%"}
 
 ```{r}
 #| echo: false
@@ -708,6 +717,100 @@ ggplot() +
 - You can save it as a `.csv` and use it in your analysis!
   - We'll get to this point eventually.
   - We will also discuss adding the survey data and then estimating a sub-area model
+
+
+
+
+
+## Creating a grid
+
+- Yesterday, we used a grid in Korea
+  - kgrid.shp
+
+- By now, you can probably see that a grid is very similar to a raster!
+
+
+
+
+
+## Load the shapefile
+
+- Let's load kshape.shp
+
+```{r}
+#| echo: true
+#| eval: true
+#| include: true
+#| fig-align: center
+#| crop: true
+
+kshape <- vect("rastersdata/kshape.shp")
+kgrid <- rast(kshape, res = 5000)
+kgrid <- as.polygons(kgrid)
+kgrid$id <- 1:nrow(kgrid)
+```
+
+
+
+
+
+## The grid
+
+```{r}
+#| echo: false
+#| eval: true
+#| include: true
+#| fig-align: center
+#| crop: true
+
+ggplot() +
+  geom_spatvector(data = kgrid) +
+  theme_bw()
+```
+
+
+
+
+
+## Not quite done
+
+- We aren't quite done. What do we want to do now?
+
+. . .
+
+```{r}
+#| echo: true
+#| eval: true
+#| include: true
+#| fig-align: center
+#| crop: true
+
+intersection <- intersect(kshape, kgrid)
+kgrid <- kgrid |>
+  filter(id %in% intersection$id)
+```
+
+
+
+
+
+## Not quite done
+
+```{r}
+#| echo: false
+#| eval: true
+#| include: true
+#| fig-align: center
+#| crop: true
+
+ggplot() + geom_spatvector(data = kgrid)
+```
+
+
+
+
+
+
 
 
 
