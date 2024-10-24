@@ -45,23 +45,26 @@ fh <- fh(
 )
 
 
+# getting varaince with the "direct" function
 df <- read_dta("rastersdata/ihs5_consumption_aggregate.dta")
+direct <- direct(y = "rexpaggpc", # the variable
+           smp_data = df, # the sample data
+           smp_domains = "TA", # the domain (area) name in the sample data
+           weights = "hh_wgt", # sample weights
+           var = TRUE,
+           HT = TRUE)
 
-# create design object
-designobj <- svydesign(id = ~ea_id, 
-          weights = ~hh_wgt,
-          strata = ~region, 
-          nest = TRUE, 
-          survey.lonely.psu = "adjust", 
-          data = df)
-# calculate total variance
-svyvar(~rexpaggpc, design = designobj, na = TRUE)
+direct$MSE
 
-# calculate BY TA (which is what we will need)
-vars <- svyby(~rexpaggpc, by = ~TA, design = designobj, FUN = svyvar)
-colnames(vars) <- c("TA", "var", "var.se")
-df <- df |>
-  left_join(vars, by = "TA")
+direct <- as_tibble(direct$MSE)
+direct <- direct |>
+  select(TA = Domain, var = Mean) |>
+  mutate(TA = as.character(TA))
+
+
+
+
+
 
 
 
