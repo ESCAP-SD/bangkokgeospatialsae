@@ -842,47 +842,6 @@ ggplot() + geom_spatvector(data = kgrid)
     
   
 
-## Surface temperature {#color-slide2 background-image="rastersassets/geeexample1.gif"}
-
-```{css, echo=FALSE}
-#color-slide2, 
-#color-slide2 h2 {
- color: white;
- text-align: left;
-}
-```
-
-
-## Climate {#color-slide3 background-image="rastersassets/geeexample2.gif"}
-
-```{css, echo=FALSE}
-#color-slide3, 
-#color-slide3 h2 {
- color: white;
- text-align: left;
-}
-```
-
-## Land cover {#color-slide4 background-image="rastersassets/geeexample3.gif"}
-
-```{css, echo=FALSE}
-#color-slide4, 
-#color-slide4 h2 {
- color: white;
- text-align: left;
-}
-```
-
-## Imagery {#color-slide5 background-image="rastersassets/geeexample4.jpg"}
-
-```{css, echo=FALSE}
-#color-slide5, 
-#color-slide5 h2 {
- text-align: left;
-}
-```
-
-
 
 ## GeoLink
 

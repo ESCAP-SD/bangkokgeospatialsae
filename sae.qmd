@@ -1,0 +1,680 @@
+---
+title: "Geospatial/SAE workshop"
+subtitle: "Small area estimation"
+author: "Josh Merfeld"
+date: "October 2024"
+date-format: "MMMM YYYY"
+
+format: 
+  revealjs:
+    self-contained: true
+    slide-number: false
+    progress: false
+    theme: [serif, custom.scss]
+    width: 1500
+    height: 1500*(9/16)
+    code-copy: true
+    code-fold: show
+    code-overflow: wrap
+    highlight-style: github
+execute:
+  echo: true
+  warnings: false
+---
+
+
+```{r}
+#| label: setup
+#| include: false
+knitr::knit_hooks$set(crop = knitr::hook_pdfcrop)
+
+library(tidyverse)
+library(sf)
+library(tidyterra)
+library(terra)
+library(cowplot)
+library(kableExtra)
+library(haven)
+
+kdisgreen <- "#006334"
+accent <- "#340063"
+accent2 <- "#633400"
+kdisgray <- "#A7A9AC"
+
+```
+
+
+
+
+## Feature selection
+
+- Let's start with some example data I have
+  - This comes from Malawi
+    - Northern Malawi only (due to the size of the data)
+  - And we'll use it all day tomorrow!<br><br>
+
+```{r}
+#| echo: true
+#| include: true
+
+library(tidyverse)
+surveycollapsed <- read_csv("saedata/ihs5ea.csv")
+predictors <- read_csv("saedata/mosaikvars.csv")
+```
+
+
+
+
+
+
+
+## A short explanation
+
+
+- The survey data is collapsed to the admin3 level (TAs)
+  - This is the `area`, in SAE terminology
+  - I have poverty rates for `areas` (TAs) and `subareas` (EAs)
+  - I have some variables that predict poverty at the `subarea` level<br><br>
+
+- So it's a perfect setup for SAE!
+  - We want to estimate poverty at the TA
+  - We don't have any observations in some TAs and we have too few in others
+  - We could estimate a subarea model
+
+
+
+
+
+
+## Observations?
+
+
+```{r}
+#| echo: false
+#| include: true
+#| fig-align: center
+
+
+adm4 <- read_sf("saedata/mw4.shp")
+adm4 <- adm4 |>
+  mutate(EA_CODE = as.numeric(EA_CODE)) |>
+  left_join(surveycollapsed, by = "EA_CODE")
+adm4$insample <- "No"
+adm4$insample[!is.na(adm4$poor)] <- "Yes"
+adm3 <- read_sf("saedata/mw3.shp")
+surveyTA <- surveycollapsed |>
+  mutate(TA_CODE = substr(EA_CODE, 1, 5)) |>
+  group_by(TA_CODE) |>
+  summarize(poor = weighted.mean(poor, total_weights, na.rm = TRUE),
+    total_obs = sum(total_obs, na.rm = TRUE)) |>
+  ungroup()
+adm3 <- adm3 |>
+  left_join(surveyTA, by = "TA_CODE")
+adm3$insample <- "No"
+adm3$insample[!is.na(adm3$poor)] <- "Yes"
+
+g1 <- ggplot() +
+  geom_sf(data = adm3, aes(fill = insample), color = "gray", lwd = 0.1) +
+  scale_fill_brewer("Have sample\nobservations?", palette = "Spectral") +
+  theme_bw() +
+  labs(subtitle = "A. TA (area) level") +
+  theme(legend.position = "bottom")
+g2 <- ggplot() +
+  geom_sf(data = adm4, aes(fill = insample), color = "gray", lwd = 0.001) +
+  scale_fill_brewer("Have sample\nobservations?", palette = "Spectral") +
+  theme_bw() +
+  labs(subtitle = "B. EA (subarea) level") +
+  theme(legend.position = "none")
+# get the legend
+g1legend <- get_legend(g1)
+
+g1new <- plot_grid(g1 + theme(legend.position = "none"), g2, ncol = 2)
+plot_grid(g1new, g1legend, ncol = 1, rel_heights = c(1, 0.1))
+
+```
+
+
+
+
+
+
+
+
+
+
+## Predictive features
+
+- I also have a bunch of predictive features!
+  - The data come from something called MOSAIKS, that we'll discuss briefly tomorrow
+  - In short, they are variables derived from satellite imagery
+  - Take a look at this
+
+```{r}
+#| echo: true
+#| include: true
+#| class-output: hscroll
+
+predictors
+
+```
+
+
+
+
+
+
+
+
+
+
+## We have a problem
+
+```{r}
+#| echo: true
+#| include: true
+#| class-output: hscroll
+# this is how many subarea observations we have
+nrow(surveycollapsed)
+```
+
+```{r}
+#| echo: true
+#| include: true
+#| class-output: hscroll
+# this is how many predictors we have
+ncol(predictors)
+```
+
+- What's the problem?
+
+. . .
+
+- It's actually impossible to estimate a model with more predictors than observations!
+
+
+
+
+
+
+
+
+
+## Another problem: overfitting
+
+- There's another problem, too<br><br>
+
+- If we have too many predictors, we can "overfit" the model
+  - This means the model is too complex
+  - It fits the data we have *too* well
+  - This means it doesn't generalize well to new data<br><br>
+  
+- So we need to select the best predictors
+  - What does "best" mean here?
+
+
+
+
+
+
+
+
+
+## Generalizing out-of-sample
+
+- We want to know what best predicts OUT of sample<br><br>
+
+- So we are going to set up our data to allow this:
+  - We will split the data into X parts
+  - A common number for X is 10, but let's do 5
+
+
+
+
+
+
+
+
+
+## Cross validation
+
+![](saeassets/CVdiagram1.png)
+
+
+
+
+
+
+## Cross validation
+
+![](saeassets/CVdiagram2.png)
+
+
+## Cross validation - random folds
+
+```{r}
+#| echo: true
+#| include: true
+
+surveycollapsed$fold <- sample(1:5, nrow(surveycollapsed), replace = TRUE)
+head(surveycollapsed)
+```
+
+
+
+
+
+
+## Cross validation
+
+![](saeassets/CVdiagram3.png)
+
+
+
+
+
+
+## Cross validation
+
+![](saeassets/CVdiagram.png)
+
+
+
+
+
+
+## But what "models" are we going to fit?
+
+- What are the models we are going to fit?
+  - We want a way to select the best predictors
+  - This will reduce the number of predictors and prevent overfitting (we hope)<br><br>
+  
+- We are going to use a method called LASSO (or lasso)
+  - It's an acronym: **L**east **A**bsolute **S**hrinkage and **S**election **O**perator
+  - No details, but it's a way to select the best predictors
+    - It "penalizes" the coefficients of the predictors
+  - `R` package `glmnet` does this for us
+
+
+
+
+
+
+
+
+
+
+
+## The setup - with a transformed outcome
+```{r}
+#| echo: true
+#| include: true
+library(glmnet)
+set.seed(398465) # this is a random process, so we want to set the seed!
+
+# we need to set up the data (combining the predictors and the outcome)
+data <- surveycollapsed |>
+  left_join(predictors, by = "EA_CODE")
+
+# cv.glmnet will set up everything for us
+lasso <- cv.glmnet(
+  y = asin(sqrt(data$poor)), # the outcome
+  x = data |> dplyr::select(starts_with("mosaik")) |> as.matrix(), # the predictors (as.matrix() is required)
+  weights = data$total_weights, # the weights (sample weights)
+  nfolds = 5) # number of folds (10 is the default)
+lasso
+```
+
+
+
+
+
+
+
+
+
+
+
+## What have we done?
+```{r}
+#| echo: true
+#| include: true
+lasso
+```
+<br>
+
+- What are the different "models"?
+  - Different values of lambda
+  - In this case, the "best" lambda is 0.02030
+  - Note that some people prefer to use the `1se` value (it is more conservative). No details today.
+
+
+
+
+
+
+
+
+
+
+## Different values of lambda: different predictors!
+```{r}
+#| echo: true
+#| include: true
+lasso
+```
+<br>
+
+- At the "optimal" lambda, we have 6 predictors (non-zero coefficients)
+
+
+
+
+
+
+
+
+
+
+## Choosing based on mean-squared error (MSE)
+```{r}
+#| echo: false
+#| include: true
+#| fig.align: center
+ggplot() + 
+  geom_point(aes(x = log(lasso$glmnet.fit$lambda), y = log(lasso$cvm))) +
+  theme_bw() +
+  labs(x = "log(lambda)", y = "log(MSE)") +
+  geom_vline(aes(xintercept = log(lasso$lambda.min)), linetype = "dashed") +
+  geom_vline(aes(xintercept = log(lasso$lambda.1se)), linetype = "dashed")
+```
+
+
+
+
+
+
+
+
+
+
+## Non-zero coefficients
+```{r}
+#| echo: false
+#| include: true
+#| fig.align: center
+ggplot() + 
+  geom_point(aes(x = log(lasso$glmnet.fit$lambda), y = lasso$glmnet.fit$df)) +
+  theme_bw() +
+  labs(x = "log(lambda)", y = "Non-zero coefficients") +
+  geom_vline(aes(xintercept = log(lasso$lambda.min)), linetype = "dashed") +
+  geom_vline(aes(xintercept = log(lasso$lambda.1se)), linetype = "dashed")
+```
+  
+
+
+
+
+
+
+
+
+
+
+## Non-zero coefficients
+```{r}
+#| echo: true
+#| include: true
+#| fig.align: center
+coef(lasso, s = "lambda.min")
+```
+
+
+
+
+
+
+
+
+
+
+## What we want: the non-zero variable names!
+
+- Getting the names of the variables is more complicated than it should be
+
+```{r}
+#| echo: true
+#| include: true
+# first, turn the coefs into a data.frame
+coefs <- coef(lasso, s = "lambda.min") |>
+  as.matrix() |>
+  as.data.frame()
+coefs
+```
+
+
+
+
+
+
+
+
+
+
+## What we want: the non-zero variable names!
+
+- Getting the names of the variables is more complicated than it should be
+
+```{r}
+#| echo: true
+#| include: true
+# Now, create variable that is the name of the rows
+coefs$variable <- rownames(coefs)
+head(coefs)
+# non-zero rows
+coefs <- coefs[coefs$s1!=0,]
+# finally, the names of the variables
+coefs$variable
+```
+  
+
+
+
+
+
+
+
+
+
+
+## One more step: remove the Intercept!
+
+- We don't want the name of the intercept
+  - All of the packages we use will add that automatically
+  
+```{r}
+#| echo: true
+#| include: true
+#| # remove first value (the intercept)
+allvariables <- coefs$variable[-1]
+allvariables
+```
+  
+
+
+
+
+
+
+
+
+
+
+## How do we use this with ebp?
+
+- In EBP, we need a `formula`
+- How do we turn this into a formula?
+  - We need to add the outcome variable (poor) `and` combine the predictors with `+`
+
+```{r}
+#| echo: true
+#| include: true
+ebpformula <- as.formula(paste("poor ~", paste(allvariables, collapse = " + ")))
+ebpformula
+```
+
+
+
+
+
+
+
+
+
+
+
+## Finally: estimating the model
+
+```{r}
+#| echo: true
+#| include: true
+library(povmap) # I like to use povmap instead of emdi (personal preference)
+# get "area" variable
+predictors$TA_CODE <- substr(predictors$EA_CODE, 1, 5)
+data$TA_CODE <- substr(data$EA_CODE, 1, 5)
+ebp <- ebp(fixed = ebpformula, # the formula
+  pop_data = predictors, # the population data
+  pop_domains = "TA_CODE", # the domain (area) name in the population data
+  smp_data = data, # the sample data
+  smp_domains = "TA_CODE", # the domain (area) name in the sample data
+  transformation = "arcsin", # I'm going to use the arcsin transformation
+  weights = "total_weights", # sample weights
+  weights_type = "nlme", # weights type
+  MSE = TRUE, # variance? yes please
+  L = 0) # this is a new thing in povmap: "analytical" point estimates. much faster!
+summary(ebp)
+```
+
+
+
+
+
+
+
+
+
+
+
+## Some results
+
+```{r}
+#| echo: true
+#| include: true
+#| class-output: hscroll
+
+plot(ebp)
+```
+
+
+
+
+
+
+
+
+
+
+
+## Some results
+
+```{r}
+#| echo: true
+#| include: true
+#| class-output: hscroll
+
+summary(ebp)
+```
+
+
+
+
+
+
+
+
+
+
+
+## Some results
+
+```{r}
+#| echo: true
+#| include: true
+#| class-output: hscroll
+
+estimators(ebp, "Mean", MSE = TRUE, CV = TRUE)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+## Let's put those results on a map!
+
+
+```{r}
+#| echo: true
+#| include: true
+#| class-output: hscroll
+
+estimates <- estimators(ebp, "Mean", MSE = TRUE, CV = TRUE)$ind
+# load mw3 shapefile
+mw3 <- read_sf("saedata/mw3.shp")
+mw3 <- mw3 |>
+  left_join(estimates, by = c("TA_CODE" = "Domain"))
+```
+
+
+
+
+
+
+## Let's put those results on a map!
+
+
+```{r}
+#| echo: false
+#| include: true
+#| fig-align: center
+#| crop: true
+
+g1 <- ggplot() + 
+  geom_sf(data = mw3, aes(fill = Mean), color = NA) +
+  scale_fill_distiller("Poverty\nrate", palette = "Spectral") +
+  theme_bw() +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) + 
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+g2 <- ggplot() + 
+  geom_sf(data = mw3, aes(fill = Mean_CV), color = NA) +
+  scale_fill_distiller("CV", palette = "Spectral") +
+  theme_bw() +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) + 
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+plot_grid(g1, g2) +
+  theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) + 
+  theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
+```
+
+
+
+
+
+
+
+
