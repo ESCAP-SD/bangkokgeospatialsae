@@ -762,3 +762,39 @@ summary(ebp)
 
 
 
+
+
+
+
+
+## One more thing: we can go higher!
+
+```{r}
+#| echo: true
+#| include: true
+predictors$dist <- substr(predictors$TA_CODE, 1, 3)
+data$dist <- substr(data$TA_CODE, 1, 3)
+ebpnotransform <- ebp(fixed = ebpformula, # the formula
+  pop_data = predictors, # the population data
+  pop_domains = "TA_CODE", # the domain (area) name in the population data
+  aggregate_to = "dist", # aggregate to district!
+  smp_data = data, # the sample data
+  smp_domains = "TA_CODE", # the domain (area) name in the sample data
+  transformation = "no",
+  weights = "total_weights", # sample weights
+  weights_type = "nlme", # weights type
+  MSE = TRUE, # variance? yes please
+  L = 0) # this is a new thing in povmap: "analytical" point estimates. much faster!
+```
+
+
+
+
+
+
+
+
+
+
+
+
