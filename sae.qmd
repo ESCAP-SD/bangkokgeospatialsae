@@ -678,3 +678,87 @@ plot_grid(g1, g2) +
 
 
 
+
+
+## What does this look like if we DON'T transform?
+
+```{r}
+#| echo: true
+#| include: true
+ebpnotransform <- ebp(fixed = ebpformula, # the formula
+  pop_data = predictors, # the population data
+  pop_domains = "TA_CODE", # the domain (area) name in the population data
+  smp_data = data, # the sample data
+  smp_domains = "TA_CODE", # the domain (area) name in the sample data
+  transformation = "no",
+  weights = "total_weights", # sample weights
+  weights_type = "nlme", # weights type
+  MSE = TRUE, # variance? yes please
+  L = 0) # this is a new thing in povmap: "analytical" point estimates. much faster!
+```
+
+
+
+
+
+
+
+
+
+
+
+## The residuals
+
+```{r}
+#| echo: true
+#| include: true
+#| class-output: hscroll
+
+plot(ebpnotransform)
+```
+
+
+
+
+
+
+## Comparing the models
+::: columns
+::: {.column width="50%"}
+
+**No transformation**
+
+```{r}
+#| echo: false
+#| include: true
+#| fig-align: center
+#| crop: true
+
+summary(ebpnotransform)
+```
+
+:::
+
+::: {.column width="50%"}
+
+**Arcsin transformation**
+
+```{r}
+#| echo: false
+#| include: true
+#| fig-align: center
+#| crop: true
+
+summary(ebp)
+```
+
+:::
+:::
+
+
+
+
+
+
+
+
