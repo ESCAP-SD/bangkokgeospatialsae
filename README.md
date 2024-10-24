@@ -12,6 +12,6 @@
     - [Raster data slides](https://escap-sd.github.io/bangkokgeospatialsae/rasterfiles.html)
   - SAE methods
     - [SAE slides](https://escap-sd.github.io/bangkokgeospatialsae/sae.html)
-    - Note that I will be using the[povmap](https://cran.r-project.org/web/packages/povmap/povmap.pdf) package for this. You might want to take a look at the details in the link.
+    - Note that I will be using the [povmap](https://cran.r-project.org/web/packages/povmap/povmap.pdf) package for this. You might want to take a look at the details in the link.
 
 
