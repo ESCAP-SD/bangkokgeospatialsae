@@ -45,7 +45,7 @@ fh <- fh(
 )
 
 
-# getting varaince with the "direct" function
+# getting variance with the "direct" function
 df <- read_dta("rastersdata/ihs5_consumption_aggregate.dta")
 direct <- direct(y = "rexpaggpc", # the variable
            smp_data = df, # the sample data
@@ -64,6 +64,23 @@ direct <- direct |>
 
 
 
+
+temp$zila <- temp$zl
+temp$upazila <- temp$upz
+
+temp$new <- paste(temp$dvn, temp$zila, temp$upazila, sep = "-")
+
+temp$ADM1_PCODE <- temp$div
+
+temp$zila[str_length(temp$zila)==1] <- paste0("0", temp$zila[str_length(temp$zila)==1])
+temp$ADM2_PCODE <- paste0(temp$ADM1_PCODE, temp$zila)
+
+temp$upazila[str_length(temp$upazila)==1] <- paste0("0", temp$upazila[str_length(temp$upazila)==1])
+temp$ADM3_PCODE <- paste0(temp$ADM2_PCODE, temp$upazila)
+
+temp$source <- gsub("div_", "", temp$source)
+temp$source <- gsub("_sample_all.dta", "", temp$source)
+temp$ADM4_PCODE <- paste0(temp$ADM3_PCODE, temp$source)
 
 
 
