@@ -1,8 +1,12 @@
 ---
 title: "Geospatial/SAE workshop"
 subtitle: "Raster files"
-author: "Josh Merfeld"
-date: "October 2024"
+author: 
+  - name: Josh Merfeld
+    affiliations:
+      - name: KDI School of Public Policy and Management
+      - name: IZA
+date: "November 2024"
 date-format: "MMMM YYYY"
 
 format: 
@@ -21,7 +25,6 @@ execute:
   echo: true
   warnings: false
 ---
-
 
 ```{r}
 #| label: setup
@@ -52,6 +55,8 @@ kdisgray <- "#A7A9AC"
 
 
 
+
+
 ## Goal
 
 - By the end of the day, we want to be able to:
@@ -76,6 +81,8 @@ kdisgray <- "#A7A9AC"
 
 
 ## Example raster grid - how much info do we need?
+
+
 
 ```{r}
 #| echo: false
@@ -111,6 +118,8 @@ gridexample +
 ```
 
 
+
+
 - Here's a grid.
   - How many points do we need?
 
@@ -120,6 +129,8 @@ gridexample +
 
 
 ## Example raster grid - how much info do we need?
+
+
 
 ```{r}
 #| echo: false
@@ -132,6 +143,8 @@ gridexample +
   theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) + 
   theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
 ```
+
+
 
 
 - Need to know location of one grid cell...
@@ -163,6 +176,8 @@ gridexample +
 
 ## Population in Cotonou, Benin
 
+
+
 ```{r}
 #| echo: false
 #| include: true
@@ -183,6 +198,8 @@ ggplot() +
 
 ```
 
+
+
 - What are the white values?
 
 
@@ -196,6 +213,8 @@ ggplot() +
   - What's the resolution? What are the units?
 
 
+
+
 ```{r}
 #| echo: false
 #| include: true
@@ -205,6 +224,8 @@ ggplot() +
 tif
 
 ```
+
+
 
 
 
@@ -233,6 +254,8 @@ tif
     - Note: can use `terra` for shapefiles, too
   - `rastersdata/beninpop.tif` is a raster of population counts in Benin
 
+
+
 ```{r}
 #| echo: true
 #| include: true
@@ -251,6 +274,8 @@ cotonou
 
 
 
+
+
 ## Plotting rasters
 
 ::: columns
@@ -260,6 +285,8 @@ cotonou
   - Can't use `ggplot`
   - So, I load another package that lets me use `ggplot` with rasters
     - `tidyterra`
+
+
 
 ```{r}
 #| echo: true
@@ -275,9 +302,13 @@ ggplot() +
   theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
 ```
 
+
+
 :::
 
 ::: {.column width="55%"}
+
+
 
 ```{r}
 #| echo: false
@@ -292,6 +323,8 @@ ggplot() +
   theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
 ```
 
+
+
 :::
 :::
 
@@ -305,6 +338,8 @@ ggplot() +
 
 ::: columns
 ::: {.column width="45%"}
+
+
 
 ```{r}
 #| echo: true
@@ -326,9 +361,13 @@ ggplot() +
   theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
 ```
 
+
+
 :::
 
 ::: {.column width="55%"}
+
+
 
 ```{r}
 #| echo: false
@@ -346,6 +385,8 @@ ggplot() +
   theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
 
 ```
+
+
 
 :::
 :::
@@ -379,6 +420,8 @@ ggplot() +
 
 - Try to load it into R using terra, then plot it with tidyterra and ggplot
 
+
+
 ```{r}
 #| echo: true
 #| eval: false
@@ -398,9 +441,13 @@ ggplot() +
   theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
 ```
 
+
+
 :::
 
 ::: {.column width="50%"}
+
+
 
 ```{r}
 #| echo: false
@@ -420,6 +467,8 @@ ggplot() +
   theme(plot.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb")) + 
   theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
 ```
+
+
 
 :::
 :::
@@ -439,6 +488,8 @@ ggplot() +
 - So let's take logs, instead!
   - Note that all the zeros become missing (can't log zero)
 
+
+
 ```{r}
 #| echo: true
 #| eval: false
@@ -458,9 +509,13 @@ ggplot() +
   theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
 ```
 
+
+
 :::
 
 ::: {.column width="50%"}
+
+
 
 ```{r}
 #| echo: false
@@ -481,6 +536,8 @@ ggplot() +
   theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
 ```
 
+
+
 :::
 :::
 
@@ -491,6 +548,8 @@ ggplot() +
 
 
 ## We want to extract the .tif values to the .shp
+
+
 
 ```{r}
 #| echo: false
@@ -527,7 +586,11 @@ plot_grid(g1, NA, g2, ncol = 3, rel_widths = c(1, 0.05, 1)) +
 
 
 
+
+
 ## Let's do it with `exactextractr`
+
+
 
 ```{r}
 #| echo: true
@@ -585,11 +648,15 @@ head(extracted)
 
 
 
+
+
 ## Now we can join the extracted data to the shapefile
 
 
 ::: columns
 ::: {.column width="45%"}
+
+
 
 
 ```{r}
@@ -615,6 +682,8 @@ ggplot() +
   theme(legend.background = element_rect(fill = "#f0f1eb", color = "#f0f1eb"))
 
 ```
+
+
 
 :::
 
@@ -737,6 +806,8 @@ ggplot() +
 
 - Let's load kshape.shp
 
+
+
 ```{r}
 #| echo: true
 #| eval: true
@@ -754,7 +825,11 @@ kgrid$id <- 1:nrow(kgrid)
 
 
 
+
+
 ## The grid
+
+
 
 ```{r}
 #| echo: false
@@ -772,11 +847,15 @@ ggplot() +
 
 
 
+
+
 ## Not quite done
 
 - We aren't quite done. What do we want to do now?
 
 . . .
+
+
 
 ```{r}
 #| echo: true
@@ -794,7 +873,11 @@ kgrid <- kgrid |>
 
 
 
+
+
 ## Not quite done
+
+
 
 ```{r}
 #| echo: false
@@ -805,6 +888,8 @@ kgrid <- kgrid |>
 
 ggplot() + geom_spatvector(data = kgrid)
 ```
+
+
 
 
 
@@ -840,7 +925,7 @@ ggplot() + geom_spatvector(data = kgrid)
 - Let's see some examples
     
     
-
+  
 
 
 ## GeoLink
@@ -850,6 +935,8 @@ ggplot() + geom_spatvector(data = kgrid)
   - It is very very easy to use
   - The problem: as of now, it only has a few datasets
 
+
+
 ```{r}
 #| eval: false
 #| echo: true
@@ -858,7 +945,4 @@ ggplot() + geom_spatvector(data = kgrid)
 devtools::install_github("SSA-Statistical-Team-Projects/GeoLink")
 
 ```
-
-
-
 
