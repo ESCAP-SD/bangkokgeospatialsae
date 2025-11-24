@@ -10,7 +10,7 @@ The material includes the slides (with all of the example code) and all of the d
 You can find the slides in the following locations:
   - Introduction (SAE and R)
     - [Intro slides](https://escap-sd.github.io/bangkokgeospatialsae/intro2025.html)
-    - [Intro data folder](https://escap-sd.github.io/introdata)
+    - [Intro data folder](https://escap-sd.github.io/introdata/)
 
 
 # 2024 workshop material
