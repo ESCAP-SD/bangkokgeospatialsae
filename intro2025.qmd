@@ -102,7 +102,7 @@ admin3$n[is.na(admin3$n)] <- 0
 
 g1 <- ggplot() + 
   geom_sf(data = admin2, aes(fill = n), color = NA, lwd = 0.001) +
-  scale_fill_distiller("Observations", palette = "Spectral") +
+  scale_fill_distiller("Observations", palette = "Spectral", limits = c(min(admin3$n), max(admin2$n))) +
   theme_bw() +
   labs(subtitle = "District (admin2)") +
   theme(plot.background = element_rect(fill = "#D7D1CC", color = "#D7D1CC")) +
@@ -110,7 +110,7 @@ g1 <- ggplot() +
   theme(legend.background = element_rect(fill = "#D7D1CC", color = "#D7D1CC"))
 g2 <- ggplot() + 
   geom_sf(data = admin3, aes(fill = n), color = NA, lwd = 0.001) +
-  scale_fill_distiller("Observations", palette = "Spectral") +
+  scale_fill_distiller("Observations", palette = "Spectral", limits = c(min(admin3$n), max(admin2$n))) +
   theme_bw() +
   labs(subtitle = "TA (admin3)") +
   theme(plot.background = element_rect(fill = "#D7D1CC", color = "#D7D1CC")) +
@@ -1040,9 +1040,11 @@ data <- data |>
 # lots of ways to change the plot
 g1 <- ggplot() +
         geom_histogram(data = data, aes(x = educyears)) +
-        labs(title = "Histogram of educyears",
-             x = "Years of education",
-             y = "Count")
+        labs(
+          title = "Histogram of educyears",
+          x = "Years of education",
+          y = "Count"
+        )
 g1
 ```
 
@@ -1057,9 +1059,10 @@ data <- data |>
           mutate(educyears = as.numeric(ifelse(educyears == "Not Mentioned", NA, educyears)))
 g1 <- ggplot() +
         geom_histogram(data = data, aes(x = educyears)) +
-        labs(title = "Histogram of educyears",
-             x = "Years of education",
-             y = "Count") +
+        labs(
+          title = "Histogram of educyears",
+          x = "Years of education",
+          y = "Count") +
         theme_bw()
 g1
 ```
