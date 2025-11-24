@@ -102,7 +102,7 @@ admin3$n[is.na(admin3$n)] <- 0
 
 g1 <- ggplot() + 
   geom_sf(data = admin2, aes(fill = n), color = NA, lwd = 0.001) +
-  scale_fill_distiller("Observations", palette = "Spectral", limits = c(min(admin3$n), max(admin2$n))) +
+  scale_fill_distiller("Observations", palette = "Spectral", limits = c(1, max(admin2$n))) +
   theme_bw() +
   labs(subtitle = "District (admin2)") +
   theme(plot.background = element_rect(fill = "#D7D1CC", color = "#D7D1CC")) +
@@ -110,7 +110,7 @@ g1 <- ggplot() +
   theme(legend.background = element_rect(fill = "#D7D1CC", color = "#D7D1CC"))
 g2 <- ggplot() + 
   geom_sf(data = admin3, aes(fill = n), color = NA, lwd = 0.001) +
-  scale_fill_distiller("Observations", palette = "Spectral", limits = c(min(admin3$n), max(admin2$n))) +
+  scale_fill_distiller("Observations", palette = "Spectral", limits = c(1, max(admin2$n))) +
   theme_bw() +
   labs(subtitle = "TA (admin3)") +
   theme(plot.background = element_rect(fill = "#D7D1CC", color = "#D7D1CC")) +
