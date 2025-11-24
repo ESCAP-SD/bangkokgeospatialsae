@@ -1,9 +1,15 @@
 # Small area estimation using earth observation data
   ![Logos](https://github.com/ESCAP-SD/bangkokgeospatialsae/blob/390f7601624533236ed83ad2082fc0591d13667f/Concept%20note/logos.png)
 
-This repository includes all of the material for the regional workshop for Asia and the Pacific on  on SAE using geospatial data, organised by ESCAP Statistics Division in partnership with UNICEF South Asia and UNSD, on 21-25 October 2024 in Bangkok, Thailand. More details of the workshop are available in the [concept note](https://github.com/ESCAP-SD/bangkokgeospatialsae/blob/main/Concept%20note/Concept%20Note%20SAE%20Workshop%20FINAL.pdf).
+This repository includes all of the material for the regional workshops for Asia and the Pacific on on SAE using geospatial data. This repository includes the all of the materials from 2024 als well as the materials from 2025.
 
 The material includes the slides (with all of the example code) and all of the data used for the practical exercises.
+
+# 2025 workshop material
+
+
+
+# 2024 workshop material
 
 You can find the slides in the following locations:
   - Introduction (SAE and R)
