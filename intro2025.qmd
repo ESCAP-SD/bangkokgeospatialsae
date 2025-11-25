@@ -1227,5 +1227,444 @@ ggplot() +
 
 
 
+## Let's look at another example
+
+- In this example, we'll also practice aggregating to higher levels (again!)
+  - Let's look at the proportion of people in agriculture and in education BY AGE GROUP
+  - We are going to use the following variables:
+    - `hh_b04` (age)
+    - `hh_b11` (main occupation)
+
+```{r}
+#| echo: true
+#| code-fold: show
+#| class-output: hscroll
+df <- read_csv("introdata/tanzanialsms.csv") # new data!
+```
+
+
+
+
+
+## Let's look at another example
+
+```{r}
+#| echo: true
+#| code-fold: show
+#| class-output: hscroll
+unique(df$hh_b11)
+```
+<br>
+- The relevant two values are "AGRICULTURE / LIVESTOCK" and "student"
+
+
+
+
+
+## First, we need to create age groups
+
+- Let's create age groups using the `cut` function
+  - This will create a *factor* variable
+
+```{r}
+#| echo: true
+#| code-fold: show
+#| class-output: hscroll
+df <- df |>
+  mutate(age_groups = cut(hh_b04, breaks = seq(from = 0, to = max(df$hh_b04), by = 5))) # <1>
+head(df$age_groups)
+```
+
+1. Creates a new variable `age_groups` based on the conditions given (line 3)
+- The `seq` function creates a sequence of numbers from 0 to the maximum age in the dataset, in increments of 5
+
+
+
+
+## Now, let's create the occupation variables
+
+```{r}
+#| echo: true
+#| code-fold: show
+#| class-output: hscroll
+df <- df |>
+  mutate(ag = ifelse(hh_b11 == "AGRICULTURE / LIVESTOCK", 1, 0), # <1>
+    ed = ifelse(hh_b11 == "student", 1, 0)) # <2>
+```
+
+- Now aggregate to `age_groups`
+
+```{r}
+#| echo: true
+#| code-fold: show
+#| class-output: hscroll
+dfgroups <- df |>
+  filter(!is.na(age_groups)) |> # <1>
+  group_by(age_groups) |> # <2>
+  summarize(ag = mean(ag, na.rm = TRUE), # <3>
+    ed = mean(ed, na.rm = TRUE)) |>
+  ungroup() # <4>
+```
+
+1. Removes missing values
+2. Groups by `age_groups`
+3. Calculates the mean of `ag` and `ed` (removing missing values)
+4. Ungroups the data frame
+
+
+
+
+## Now we can plot them
+
+:::: {.columns}
+
+::: {.column width="50%"}
+
+```{r}
+#| echo: true
+#| code-fold: show
+#| eval: false
+ggplot() +
+  geom_point(data = dfgroups, 
+    aes(x = age_groups, y = ag)) +
+  labs(x = "Age group", 
+    y = "Proportion of respondents in category",
+    title = "Agriculture") +
+  theme_bw()
+```
+<br><br>
+```{r}
+#| echo: true
+#| code-fold: show
+#| eval: false
+ggplot() +
+  geom_point(data = dfgroups, 
+    aes(x = age_groups, y = ed)) +
+  labs(x = "Age group", 
+    y = "Proportion of respondents in category",
+    title = "Student") +
+  theme_bw()
+```
+:::
+
+::: {.column width="50%"}
+```{r}
+#| echo: false
+#| evaluate: true
+ggplot() +
+  geom_point(data = dfgroups, 
+    aes(x = age_groups, y = ag)) +
+  labs(x = "Age group", 
+    y = "Proportion of respondents in category",
+    title = "Agriculture") +
+  theme_bw()
+ggplot() +
+  geom_point(data = dfgroups, 
+    aes(x = age_groups, y = ed)) +
+  labs(x = "Age group", 
+    y = "Proportion of respondents in category",
+    title = "Student") +
+  theme_bw()
+```
+:::
+
+::::
+
+
+
+
+## But what if we want to plot them on the same graph?
+
+
+:::: {.columns}
+
+::: {.column width="50%"}
+<br>
+
+- This is a little more complicated!
+- Look what happens here:
+
+```{r}
+#| echo: true
+#| eval: false
+ggplot() +
+  geom_point(data = dfgroups, 
+    aes(x = age_groups, y = ag)) +
+  geom_point(data = dfgroups, 
+    aes(x = age_groups, y = ed)) +
+  labs(x = "Age group", 
+    y = "Proportion of respondents in category") +
+  theme_bw()
+```
+
+- Do you see the problem?
+:::
+
+::: {.column width="50%"}
+<br><br><br>
+
+```{r}
+#| echo: false
+#| eval: true
+ggplot() +
+  geom_point(data = dfgroups, 
+    aes(x = age_groups, y = ag)) +
+  geom_point(data = dfgroups, 
+    aes(x = age_groups, y = ed)) +
+  labs(x = "Age group", 
+    y = "Proportion of respondents in category") +
+  theme_bw()
+```
+:::
+
+::::
+
+
+
+
+## But what if we want to plot them on the same graph?
+
+
+:::: {.columns}
+
+::: {.column width="50%"}
+<br>
+
+- We can specify individual colors, OUTSIDE the `aes()`.
+
+```{r}
+#| echo: true
+#| eval: false
+ggplot() +
+  geom_point(data = dfgroups, 
+    aes(x = age_groups, y = ag), color = "navy") +
+  geom_point(data = dfgroups, 
+    aes(x = age_groups, y = ed), color = "orange") +
+  labs(x = "Age group", 
+    y = "Proportion of respondents in category") +
+  theme_bw()
+```
+
+- Still a problem! What is it?
+:::
+
+::: {.column width="50%"}
+<br><br><br>
+
+```{r}
+#| echo: false
+#| eval: true
+ggplot() +
+  geom_point(data = dfgroups, 
+    aes(x = age_groups, y = ag), color = "navy") +
+  geom_point(data = dfgroups, 
+    aes(x = age_groups, y = ed), color = "orange") +
+  labs(x = "Age group", y = "Proportion of respondents in category") +
+  theme_bw()
+```
+:::
+
+::::
+
+
+
+
+## Here's the code. Let's discuss!
+
+```{r}
+#| echo: true
+#| eval: true
+library(RColorBrewer)
+colors <- brewer.pal(3, "Set2")
+colors
+```
+
+<br>
+
+
+```{r}
+#| echo: true
+#| eval: false
+ggplot() +
+  geom_point(data = dfgroups, 
+    aes(x = age_groups, y = ag, color = "Ag")) +
+  geom_point(data = dfgroups, 
+    aes(x = age_groups, y = ed, color = "Educ.")) +
+  labs(x = "Age group", 
+    y = "Proportion of respondents in category") +
+  scale_color_manual("Occupation:", 
+    values = c("Ag" = colors[1], "Educ." = colors[2])) +
+  theme_bw()
+```
+
+
+
+
+## How does it look?
+
+
+:::: {.columns}
+
+::: {.column width="55%"}
+
+```{r}
+#| echo: true
+#| code-fold: show
+#| eval: false
+ggplot() +
+  geom_point(data = dfgroups, 
+    aes(x = age_groups, y = ag, color = "Ag")) +
+  geom_point(data = dfgroups, 
+    aes(x = age_groups, y = ed, color = "Educ.")) +
+  labs(x = "Age group", 
+    y = "Proportion of respondents in category") +
+  scale_color_manual("Occupation:", 
+    values = c("Ag" = colors[1], "Educ." = colors[2])) +
+  theme_bw()
+```
+
+```{r}
+#| echo: true
+#| code-fold: show
+#| eval: false
+ggplot() +
+  geom_point(data = dfgroups, 
+    aes(x = age_groups, y = ag, color = "Ag")) +
+  geom_point(data = dfgroups, 
+    aes(x = age_groups, y = ed, color = "Educ.")) +
+  labs(x = "Age group", 
+    y = "Proportion of respondents in category") +
+  scale_color_manual("Occupation:", 
+    values = c("Ag" = colors[1], "Educ." = colors[2])) +
+  theme_bw() +
+  theme(legend.position = c(0.9, 0.8))
+```
+:::
+
+::: {.column width="45%"}
+```{r}
+#| echo: false
+#| evaluate: true
+ggplot() +
+  geom_point(data = dfgroups, 
+    aes(x = age_groups, y = ag, color = "Ag")) +
+  geom_point(data = dfgroups, 
+    aes(x = age_groups, y = ed, color = "Educ.")) +
+  labs(x = "Age group", 
+    y = "Proportion of respondents in category") +
+  scale_color_manual("Occupation:", 
+    values = c("Ag" = colors[1], "Educ." = colors[2])) +
+  theme_bw()
+ggplot() +
+  geom_point(data = dfgroups, 
+    aes(x = age_groups, y = ag, color = "Ag")) +
+  geom_point(data = dfgroups, 
+    aes(x = age_groups, y = ed, color = "Educ.")) +
+  labs(x = "Age group", 
+    y = "Proportion of respondents in category") +
+  scale_color_manual("Occupation:", 
+    values = c("Ag" = colors[1], "Educ." = colors[2])) +
+  theme_bw() +
+  theme(legend.position = c(0.9, 0.8))
+```
+:::
+
+::::
+
+
+
+
+## What about doing line graphs?
+
+
+- We have to make a change! We cannot do a line graph with a factor variable!
+
+```{r}
+#| echo: true
+#| code-fold: show
+#| eval: false
+ggplot() +
+  geom_line(data = dfgroups, aes(x = as.numeric(age_groups), y = ag, color = "Ag")) + # <1>
+  geom_line(data = dfgroups, aes(x = as.numeric(age_groups), y = ed, color = "Educ.")) +
+  scale_x_continuous(breaks = as.numeric(unique(dfgroups$age_groups)), labels = unique(dfgroups$age_groups)) + # <2>
+  labs(x = "Age group", y = "Proportion of respondents in category") +
+  scale_color_manual("Occupation:", values = c("Ag" = colors[1], "Educ." = colors[2])) +
+  theme_bw() +
+  theme(legend.position = c(0.9, 0.8))
+```
+1. Turn it into a numeric variable.
+2. Change the x-axis to the numeric values and label it with the original values.
+
+
+
+
+## What about doing line graphs?
+
+```{r}
+#| echo: false
+#| evaluate: true
+ggplot() +
+  geom_line(data = dfgroups, 
+    aes(x = as.numeric(age_groups), y = ag, color = "Ag")) +
+  geom_line(data = dfgroups, 
+    aes(x = as.numeric(age_groups), y = ed, color = "Educ.")) +
+  scale_x_continuous(breaks = as.numeric(unique(dfgroups$age_groups)), 
+    labels = unique(dfgroups$age_groups)) +
+  labs(x = "Age", 
+    y = "Proportion of respondents in category") +
+  scale_color_manual("Occupation:", 
+    values = c("Ag" = colors[1], "Educ." = colors[2])) +
+  theme_bw() +
+  theme(legend.position = c(0.9, 0.8))
+```
+
+
+
+
+
+
+## Finally, the points and lines together
+
+```{r}
+#| echo: true
+#| code-fold: show
+#| eval: false
+ggplot() +
+  geom_point(data = dfgroups, aes(x = as.numeric(age_groups), y = ag, color = "Ag")) +
+  geom_line(data = dfgroups, aes(x = as.numeric(age_groups), y = ag, color = "Ag")) +
+  geom_point(data = dfgroups, aes(x = as.numeric(age_groups), y = ed, color = "Educ.")) +
+  geom_line(data = dfgroups, aes(x = as.numeric(age_groups), y = ed, color = "Educ.")) +
+  scale_x_continuous(breaks = as.numeric(unique(dfgroups$age_groups)), labels = unique(dfgroups$age_groups)) + # <2>
+  labs(x = "Age group", y = "Proportion of respondents in category") +
+  scale_color_manual("Occupation:", values = c("Ag" = colors[1], "Educ." = colors[2])) +
+  theme_bw() +
+  theme(legend.position = c(0.9, 0.8))
+```
+
+
+
+
+## Finally, the points and lines together
+
+```{r}
+#| echo: false
+#| eval: true
+ggplot() +
+  geom_point(data = dfgroups, aes(x = as.numeric(age_groups), y = ag, color = "Ag")) +
+  geom_line(data = dfgroups, aes(x = as.numeric(age_groups), y = ag, color = "Ag")) +
+  geom_point(data = dfgroups, aes(x = as.numeric(age_groups), y = ed, color = "Educ.")) +
+  geom_line(data = dfgroups, aes(x = as.numeric(age_groups), y = ed, color = "Educ.")) +
+  scale_x_continuous(breaks = as.numeric(unique(dfgroups$age_groups)), labels = unique(dfgroups$age_groups)) + # <2>
+  labs(x = "Age group", y = "Proportion of respondents in category") +
+  scale_color_manual("Occupation:", values = c("Ag" = colors[1], "Educ." = colors[2])) +
+  theme_bw() +
+  theme(legend.position = c(0.9, 0.8))
+```
+
+
+
+
+
+
 
 

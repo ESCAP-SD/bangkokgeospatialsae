@@ -1,0 +1,856 @@
+---
+title: "Geospatial/SAE workshop"
+subtitle: "Raster files"
+author: "Josh Merfeld"
+date: "November 2025"
+date-format: "MMMM YYYY"
+
+format: 
+  revealjs:
+    self-contained: true
+    slide-number: false
+    progress: false
+    theme: [serif, custom2025.scss]
+    width: 1500
+    height: 1500*(9/16)
+    code-copy: true
+    code-fold: show
+    code-overflow: wrap
+    highlight-style: github
+execute:
+  echo: true
+  warnings: false
+---
+
+
+```{r}
+#| label: setup
+#| include: false
+knitr::knit_hooks$set(crop = knitr::hook_pdfcrop)
+
+library(tidyverse)
+library(sf)
+library(terra)
+library(tidyterra)
+library(cowplot)
+library(kableExtra)
+library(haven)
+
+Sys.setenv("RETICULATE_PYTHON" = "~/Library/r-miniconda-arm64/envs/RGEEDIM/bin/python3.9")
+library(rgeedim)
+# short duration token
+gd_authenticate(auth_mode = "gcloud")
+# initialize and should be good to go 
+gd_initialize()
+
+uqpurple <- "#51247A"
+accent <- "#962A8B"
+accent2 <- "#00A2C7"
+uqgray <- "#D7D1CC"
+
+```
+
+
+
+
+## Rasters
+
+- We've discussed shapefiles
+  -  Now let's talk about rasters!<br><br>
+  
+- Rasters are a different type of geospatial data
+  - They are made up of a grid of cells
+  - Each cell has a value
+
+
+
+
+
+
+## Example raster grid - how much info do we need?
+
+```{r}
+#| echo: false
+#| include: true
+#| fig-align: center
+#| crop: true
+# create example grid
+main <- ggplot() +
+  geom_hline(yintercept = 1:10, color = "black") +
+  geom_vline(xintercept = 1:10, color = "black") +
+  theme_bw() +
+  labs(x = "X", y = "Y") +
+  scale_x_continuous(breaks = 1:10, minor_breaks = NULL) +
+  scale_y_continuous(breaks = 1:10, minor_breaks = NULL) + 
+  theme(plot.background = element_rect(fill = "#D7D1CC", color = "#D7D1CC")) + 
+  theme(legend.background = element_rect(fill = "#D7D1CC", color = "#D7D1CC"))
+
+gridexample <- ggdraw() +
+  draw_plot(
+    {
+      main +
+        coord_sf(
+          xlim = c(0.99, 10.01),
+          ylim = c(0.99, 10.01),
+          expand = FALSE) + 
+  theme(plot.background = element_rect(fill = "#D7D1CC", color = "#D7D1CC")) + 
+  theme(legend.background = element_rect(fill = "#D7D1CC", color = "#D7D1CC"))
+    }
+)
+gridexample + 
+  theme(plot.background = element_rect(fill = "#D7D1CC", color = "#D7D1CC")) + 
+  theme(legend.background = element_rect(fill = "#D7D1CC", color = "#D7D1CC"))
+```
+
+
+- Here's a grid.
+  - How many points do we need?
+
+
+
+
+
+
+## Example raster grid - how much info do we need?
+
+```{r}
+#| echo: false
+#| include: true
+#| crop: true
+#| fig-align: center
+
+
+gridexample + 
+  theme(plot.background = element_rect(fill = "#D7D1CC", color = "#D7D1CC")) + 
+  theme(legend.background = element_rect(fill = "#D7D1CC", color = "#D7D1CC"))
+```
+
+
+- Need to know location of one grid cell...
+  - And the size of each grid!
+
+
+
+
+
+
+## How much info do we need?
+
+- In other words, we do not need a point for every raster cell<br><br>
+
+- We just need to know:
+  - The location of one cell
+  - The size of each cell
+    - This is called the `resolution` of the raster<br><br>
+    
+- Example:
+  - I know the first grid cell in bottom left is at (0, 0)
+  - I know each grid cell is 1 meter by 1 meter (the resolution)
+  - Then I know the exact location of every single grid cell
+
+
+
+
+
+
+## Population in Cotonou, Benin
+
+```{r}
+#| echo: false
+#| include: true
+#| crop: true
+#| fig-align: center
+
+library(tidyterra)
+
+tif <- rast("rastersdata/beninpop.tif")
+
+ggplot() +
+  geom_spatraster(data = tif, ) + 
+  scale_fill_distiller("Population\ncount", palette = "Spectral", na.value = "white") +
+  theme_bw() +
+  labs(subtitle = "Population in Cotonou, Benin") + 
+  theme(plot.background = element_rect(fill = "#D7D1CC", color = "#D7D1CC")) + 
+  theme(legend.background = element_rect(fill = "#D7D1CC", color = "#D7D1CC"))
+
+```
+
+- What are the white values?
+
+
+
+
+
+
+## Population in Cotonou, Benin
+
+- Here's the information for this raster
+  - What's the resolution? What are the units?
+
+
+```{r}
+#| echo: false
+#| include: true
+#| fig-align: center
+#| crop: true
+
+tif
+
+```
+
+
+
+
+
+
+## Rasters
+
+- Rasters are defined by the grid layout and the resolution
+  - Grid cells are sometimes called pixels (just like images, which are often rasters!)<br><br>
+
+- There are many different file types for rasters
+  - `.tif` or `.tiff` (one of the most common)
+  - `.nc` (NetCDF, common for very large raster data)
+  - Image files, e.g. `png`, `jpg`, etc.<br><br>
+
+
+
+
+
+
+## Reading rasters in R
+
+- Reading rasters is also quite easy!
+  - Going to use the `terra` package for it
+    - Note: can use `terra` for shapefiles, too
+  - `rastersdata/beninpop.tif` is a raster of population counts in Benin
+
+```{r}
+#| echo: true
+#| include: true
+#| fig-align: center
+#| crop: true
+library(terra)
+
+# this is the raster for Cotonou, Benin
+cotonou <- rast("rastersdata/beninpop.tif")
+cotonou
+```
+
+
+
+
+
+
+
+## Plotting rasters
+
+::: columns
+::: {.column width="45%"}
+
+- Plotting rasters only with `terra` is a bit of a pain
+  - Can't use `ggplot`
+  - So, I load another package that lets me use `ggplot` with rasters
+    - `tidyterra`
+
+```{r}
+#| echo: true
+#| eval: false
+#| fig-align: center
+#| crop: true
+library(tidyterra)
+
+ggplot() +
+  geom_spatraster(data = cotonou) + 
+  theme_bw() +
+  theme(plot.background = element_rect(fill = "#D7D1CC", color = "#D7D1CC")) + 
+  theme(legend.background = element_rect(fill = "#D7D1CC", color = "#D7D1CC"))
+```
+
+:::
+
+::: {.column width="55%"}
+
+```{r}
+#| echo: false
+#| include: true
+#| fig-align: center
+#| crop: true
+library(tidyterra)
+
+ggplot() +
+  geom_spatraster(data = cotonou) + 
+  theme(plot.background = element_rect(fill = "#D7D1CC", color = "#D7D1CC")) + 
+  theme(legend.background = element_rect(fill = "#D7D1CC", color = "#D7D1CC"))
+```
+
+:::
+:::
+
+
+
+
+
+
+
+## Making it nicer
+
+::: columns
+::: {.column width="45%"}
+
+```{r}
+#| echo: true
+#| eval: false
+#| fig-align: center
+#| crop: true
+library(tidyterra)
+
+ggplot() +
+  geom_spatraster(data = cotonou) + 
+  # distiller is for continuous values
+  # but we can use palettes!
+  # I like spectral a lot
+  scale_fill_distiller("Population\ncount", 
+    palette = "Spectral", na.value = "white") +
+  theme_bw() +
+  labs(subtitle = "Population in Cotonou, Benin") + 
+  theme(plot.background = element_rect(fill = "#D7D1CC", color = "#D7D1CC")) + 
+  theme(legend.background = element_rect(fill = "#D7D1CC", color = "#D7D1CC"))
+```
+
+:::
+
+::: {.column width="55%"}
+
+```{r}
+#| echo: false
+#| include: true
+#| fig-align: center
+#| crop: true
+library(tidyterra)
+
+ggplot() +
+  geom_spatraster(data = cotonou) + 
+  scale_fill_distiller("Population\ncount", palette = "Spectral", na.value = "white") +
+  theme_bw() +
+  labs(subtitle = "Population in Cotonou, Benin") + 
+  theme(plot.background = element_rect(fill = "#D7D1CC", color = "#D7D1CC")) + 
+  theme(legend.background = element_rect(fill = "#D7D1CC", color = "#D7D1CC"))
+
+```
+
+:::
+:::
+
+
+
+
+
+
+
+## Extracting raster data to shapefiles
+
+- Let's go back to our use case:
+  - We want to estimate a sub-area model at the EA level in Malawi
+  - This means we need to extract raster data to the EA level
+  - We can do this with `terra`, `sf`, and `exactextractr`
+    - `terra` has its own method, but i find `exactextractr` to be MUCH faster<br><br>
+    
+- Let's start by looking at the raster I've uploaded to the `rastersdata`: `mwpop.tif`
+
+
+
+
+
+
+
+## Give it a try
+
+::: columns
+::: {.column width="50%"}
+
+- Try to load it into R using terra, then plot it with tidyterra and ggplot
+
+```{r}
+#| echo: true
+#| eval: false
+#| fig-align: center
+#| code-fold: show
+#| crop: true
+
+tif <- rast("rastersdata/mwpop.tif")
+
+ggplot() +
+  geom_spatraster(data = tif) + 
+  scale_fill_distiller("Population\ncount", 
+    palette = "Spectral", na.value = "white") +
+  theme_bw() +
+  labs(subtitle = "Population in Northern Malawi") + 
+  theme(plot.background = element_rect(fill = "#D7D1CC", color = "#D7D1CC")) + 
+  theme(legend.background = element_rect(fill = "#D7D1CC", color = "#D7D1CC"))
+```
+
+:::
+
+::: {.column width="50%"}
+
+```{r}
+#| echo: false
+#| eval: true
+#| fig-align: center
+#| code-fold: show
+#| crop: true
+
+tif <- rast("rastersdata/mwpop.tif")
+
+ggplot() +
+  geom_spatraster(data = tif) + 
+  scale_fill_distiller("Population\ncount", 
+    palette = "Spectral", na.value = "white") +
+  theme_bw() +
+  labs(subtitle = "Population in Northern Malawi") + 
+  theme(plot.background = element_rect(fill = "#D7D1CC", color = "#D7D1CC")) + 
+  theme(legend.background = element_rect(fill = "#D7D1CC", color = "#D7D1CC"))
+```
+
+:::
+:::
+
+
+
+
+
+
+
+## Give it a try
+
+::: columns
+::: {.column width="50%"}
+
+- I actually don't like that map! It's too hard to see because of all the low values.
+- So let's take logs, instead!
+  - Note that all the zeros become missing (can't log zero)
+
+```{r}
+#| echo: true
+#| eval: false
+#| fig-align: center
+#| code-fold: show
+#| crop: true
+
+tif <- rast("rastersdata/mwpop.tif")
+
+ggplot() +
+  geom_spatraster(data = log(tif)) + 
+  scale_fill_distiller("Population\ncount (log)", 
+    palette = "Spectral", na.value = "white") +
+  theme_bw() +
+  labs(subtitle = "Population in Northern Malawi") + 
+  theme(plot.background = element_rect(fill = "#D7D1CC", color = "#D7D1CC")) + 
+  theme(legend.background = element_rect(fill = "#D7D1CC", color = "#D7D1CC"))
+```
+
+:::
+
+::: {.column width="50%"}
+
+```{r}
+#| echo: false
+#| eval: true
+#| fig-align: center
+#| code-fold: show
+#| crop: true
+
+tif <- rast("rastersdata/mwpop.tif")
+
+ggplot() +
+  geom_spatraster(data = log(tif)) + 
+  scale_fill_distiller("Population\ncount (log)", 
+    palette = "Spectral", na.value = "white") +
+  theme_bw() +
+  labs(subtitle = "Population in Northern Malawi") + 
+  theme(plot.background = element_rect(fill = "#D7D1CC", color = "#D7D1CC")) + 
+  theme(legend.background = element_rect(fill = "#D7D1CC", color = "#D7D1CC"))
+```
+
+:::
+:::
+
+
+
+
+
+
+
+## We want to extract the .tif values to the .shp
+
+```{r}
+#| echo: false
+#| eval: true
+#| fig-align: center
+#| crop: true
+
+tif <- rast("rastersdata/mwpop.tif")
+adm4 <- read_sf("rastersdata/mw4.shp")
+
+g1 <- ggplot() +
+  geom_spatraster(data = tif) + 
+  scale_fill_distiller("Population\ncount (log)", 
+    palette = "Spectral", na.value = "white") +
+  theme_bw() +
+  labs(subtitle = "Population in Northern Malawi") + 
+  theme(plot.background = element_rect(fill = "#D7D1CC", color = "#D7D1CC")) + 
+  theme(legend.background = element_rect(fill = "#D7D1CC", color = "#D7D1CC"))
+g2 <- ggplot() +
+  geom_sf(data = adm4, color = "black", fill = "transparent", lwd = 0.1) + 
+  theme_bw() +
+  labs(subtitle = "EAs (admin4) Northern Malawi") + 
+  theme(plot.background = element_rect(fill = "#D7D1CC", color = "#D7D1CC")) + 
+  theme(legend.background = element_rect(fill = "#D7D1CC", color = "#D7D1CC"))
+
+plot_grid(g1, NA, g2, ncol = 3, rel_widths = c(1, 0.05, 1)) + 
+  theme(plot.background = element_rect(fill = "#D7D1CC", color = "#D7D1CC")) + 
+  theme(legend.background = element_rect(fill = "#D7D1CC", color = "#D7D1CC"))
+```
+
+
+
+
+
+
+
+## Let's do it with `exactextractr`
+
+```{r}
+#| echo: true
+#| eval: false
+#| include: true
+#| fig-align: center
+#| crop: true
+library(exactextractr)
+
+tif <- rast("rastersdata/mwpop.tif")
+adm4 <- read_sf("rastersdata/mw4.shp")
+# make sure they are in the same CRS! (they already are, but just in case)
+# st_transform is for the sf object
+adm4 <- st_transform(adm4, crs = crs(tif))
+
+# extract the raster values to the shapefile
+# we are going to SUM, and add the EA_CODE from the shapefile to the result
+extracted <- exact_extract(tif, adm4, fun = "sum", append_cols = "EA_CODE")
+```
+
+```{r}
+#| echo: false
+#| eval: true
+#| include: false
+#| fig-align: center
+#| crop: true
+library(exactextractr)
+
+tif <- rast("rastersdata/mwpop.tif")
+adm4 <- read_sf("rastersdata/mw4.shp")
+# make sure they are in the same CRS! (they already are, but just in case)
+# st_transform is for the sf object
+adm4 <- st_transform(adm4, crs = crs(tif))
+
+# extract the raster values to the shapefile
+# we are going to SUM, and add the EA_CODE from the shapefile to the result
+extracted <- exact_extract(tif, adm4, fun = "sum", append_cols = "EA_CODE")
+# save it!
+write_csv(extracted |> rename(pop = sum), "rastersdata/mwpopEAs.csv")
+```
+
+```{r}
+#| echo: true
+#| eval: true
+#| include: true
+#| fig-align: center
+#| crop: true
+
+head(extracted)
+```
+
+
+
+
+
+
+
+## Now we can join the extracted data to the shapefile
+
+
+::: columns
+::: {.column width="45%"}
+
+
+```{r}
+#| echo: true
+#| eval: false
+#| include: true
+#| fig-align: center
+#| crop: true
+
+# join
+adm4 <- adm4 |>
+  left_join(extracted, by = "EA_CODE")
+
+# plot it!
+ggplot() +
+  geom_sf(data = adm4, aes(fill = sum), 
+    color = "black", lwd = 0.01) +
+  scale_fill_distiller("Population\ncount", 
+    palette = "Spectral", na.value = "white") +
+  theme_bw() +
+  labs(subtitle = "Population in EAs") + 
+  theme(plot.background = element_rect(fill = "#D7D1CC", color = "#D7D1CC")) + 
+  theme(legend.background = element_rect(fill = "#D7D1CC", color = "#D7D1CC"))
+
+```
+
+:::
+
+::: {.column width="55%"}
+
+![](rastersassets/mwpopEAs.png){fig-align="center"}
+
+:::
+:::
+
+
+
+
+
+
+
+## Now it's your turn
+
+- Here's your task:
+  - Search for "worldpop population counts"
+    - Should be the first result (link: [https://hub.worldpop.org/project/categories?id=3](https://hub.worldpop.org/project/categories?id=3))
+  - Scroll down the page, click on "unconstrained individual countries 2000-2020 UN adjusted (1km resolution)
+
+![](rastersassets/worldpoppage1.png){fig-align="center"}
+
+
+
+
+
+
+## Now it's your turn
+
+- Here's your task:
+  - Search for "worldpop population counts"
+    - Should be the first result (link: [https://hub.worldpop.org/project/categories?id=3](https://hub.worldpop.org/project/categories?id=3))
+  - Scroll down the page, click on "unconstrained individual countries 2000-2020 UN adjusted (1km resolution)
+  - Then, search for a country (maybe yours?)
+
+![](rastersassets/worldpoppage2.png){fig-align="center"}
+
+
+
+
+
+## Now it's your turn
+
+- Here's your task:
+  - Search for "worldpop population counts"
+    - Should be the first result (link: [https://hub.worldpop.org/project/categories?id=3](https://hub.worldpop.org/project/categories?id=3))
+  - Scroll down the page, click on "unconstrained individual countries 2000-2020 UN adjusted (1km resolution)
+  - Then, search for a country (maybe yours?)
+  - Click on "Data & Resources" for 2020
+  - Scroll down to the bottom of the page and download the .tif
+
+
+
+
+
+## Now it's your turn
+
+- Load the .tif into R using `terra`
+- Plot the raster using `tidyterra` and `ggplot`
+  - Make it look nice!
+
+
+
+
+
+## Let's keep going!
+
+- Now you need to find a shapefile for the same country
+- This will be a bit less straightforward
+  - Search for "shapefile COUNTRY humdata"
+  - You should find a link to the Humanitarian Data Exchange
+  - Click on it and see if it has shapefiles for your country of choice
+  - If so, download a shapefile (it can be at a higher admin level)
+    - If not, raise your hand and I'll come help you find a shapefile
+  - Load it into R and plot it!
+
+
+
+
+
+## One last thing
+
+- You have the population tif and the shapefile
+- Extract the population data (using sum, don't forget!) to the shapefile
+  - Use `append_cols` and make sure you choose the correct identifier!
+- Join the data to the shapefile
+- Plot the shapefile with the population data
+  - Make it look nice!
+
+
+
+
+
+## What can you do with that data?
+
+- Now you have a shapefile with population data
+- You can save it as a `.csv` and use it in your analysis!
+  - We'll get to this point eventually.
+  - We will also discuss adding the survey data and then estimating a sub-area model
+
+
+
+
+
+## Creating a grid
+
+- Yesterday, we used a grid in Korea
+  - kgrid.shp
+
+- By now, you can probably see that a grid is very similar to a raster!
+
+
+
+
+
+## Load the shapefile
+
+- Let's load kshape.shp
+
+```{r}
+#| echo: true
+#| eval: true
+#| include: true
+#| fig-align: center
+#| crop: true
+
+kshape <- vect("rastersdata/kshape.shp")
+kgrid <- rast(kshape, res = 5000)
+kgrid <- as.polygons(kgrid)
+kgrid$id <- 1:nrow(kgrid)
+```
+
+
+
+
+
+## The grid
+
+```{r}
+#| echo: false
+#| eval: true
+#| include: true
+#| fig-align: center
+#| crop: true
+
+ggplot() +
+  geom_spatvector(data = kgrid) +
+  theme_bw()
+```
+
+
+
+
+
+## Not quite done
+
+- We aren't quite done. What do we want to do now?
+
+. . .
+
+```{r}
+#| echo: true
+#| eval: true
+#| include: true
+#| fig-align: center
+#| crop: true
+
+intersection <- intersect(kshape, kgrid)
+kgrid <- kgrid |>
+  filter(id %in% intersection$id)
+```
+
+
+
+
+
+## Not quite done
+
+```{r}
+#| echo: false
+#| eval: true
+#| include: true
+#| fig-align: center
+#| crop: true
+
+ggplot() + geom_spatvector(data = kgrid)
+```
+
+
+
+
+
+
+
+
+
+
+
+# Finding rasters {background-image="rastersassets/ndvibackground.png" background-position="right"}
+
+
+## Where can you find rasters?
+
+- Depending on the variable, rasters are sometimes quite easy to find!
+  - We already saw one example: WorldPop (population counts)<br><br>
+
+- There are two large online repositories:
+  - [Google Earth Engine](https://developers.google.com/earth-engine/datasets)
+  - [Microsoft Planetary Computer](https://planetarycomputer.microsoft.com/)
+    - This one is newer and has less data (for now)
+
+
+
+## {background-image="rastersassets/gee1.png"}
+
+## Google Earth Engine
+
+- Google Earth Engine has _a lot_ of data.
+
+- Let's see some examples
+    
+    
+
+
+
+## GeoLink
+
+- I'm going to start with some example code for a package called `GeoLink`
+  - This package actually uses Microsoft Planetary Computer
+  - It is very very easy to use
+  - The problem: as of now, it only has a few datasets
+
+```{r}
+#| eval: false
+#| echo: true
+
+# we have to download it differently
+devtools::install_github("SSA-Statistical-Team-Projects/GeoLink")
+
+```
+
+
+
+
