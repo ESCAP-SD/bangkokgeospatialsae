@@ -16,6 +16,9 @@ You can find the slides in the following locations:
       - [Data](https://escap-sd.github.io/bangkokgeospatialsae/vectorfilesdata)
     - [Rasters](https://escap-sd.github.io/bangkokgeospatialsae/rasterfiles2025.html)
       - [Data](https://escap-sd.github.io/bangkokgeospatialsae/rastersdata)
+  - Day three
+    - [SAE and feature selection](https://escap-sd.github.io/bangkokgeospatialsae/sae2025.html)
+    - Note that the [povmap](https://cran.r-project.org/web/packages/povmap/povmap.pdf) package is used for this. The details of the package are available in the link.
 
 
 # 2024 workshop material
