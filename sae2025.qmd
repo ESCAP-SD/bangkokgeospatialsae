@@ -182,6 +182,76 @@ $$y_i = X_i'\beta+v_i+e_i$$
 
 
 
+## Area-level models and geospatial data
+
+- In our experience, geospatial data is much less predictive when aggregated
+
+- We suggest using sub-area models when using geospatial data, if possible
+  - Can even do household-level with geospatial data ("unit-context model")
+
+
+
+
+
+
+## An alternative: machine learning
+
+- Explosion in ML methods over last two decades
+
+- "Deep learning" e.g.
+  - Convolutional neural networks (CNNs)
+  - Vision transformers (similar architecture to LLMs!)
+
+. . .
+
+- Problem: many of these methods cannot produce standard confidence intervals/standard errors
+  - NSOs hesitant to adopt with these
+
+. . .
+
+- Possible solution: XGBoost and a non-parametric (residual) bootstrap
+
+
+
+
+
+
+
+  
+  
+  
+## Decision trees and XGBoost
+
+![](saeassets/path1.png){width=75% fig-align="center"}
+  
+  
+  
+
+
+  
+## Decision trees and XGBoost
+
+1. Decision tree: makes prediction
+2. Residual: difference between actual and predicted
+3. New decision tree: makes prediction on residuals
+4. Repeat steps 2 and 3 many times
+5. Final prediction: sum of all predictions
+  
+  
+  
+
+
+  
+## It seems to work!
+
+- Merfeld et al. (2025) shows:
+  - XGBoost predictions more accurate than EBP when estimating sub-area models
+  - XGBoost uncertainty more accurate than EBP when estimating sub-area models
+  - XGBoost uncertainty smaller than EBP when estimating sub-area models
+
+
+
+
 
 
 
