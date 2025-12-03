@@ -1,5 +1,5 @@
 # Small area estimation using earth observation data
-  ![Logos](https://github.com/ESCAP-SD/bangkokgeospatialsae/blob/390f7601624533236ed83ad2082fc0591d13667f/Concept%20note/logos.png)
+  ![Logos](https://github.com/ESCAP-SD/bangkokgeospatialsae/blob/390f7601624533236ed83ad2082fc0591d13667f/Concept%20note/logos2.png)
 
 This repository includes all of the material for the regional workshops for Asia and the Pacific on on SAE using geospatial data. This repository includes the all of the materials from 2024 als well as the materials from 2025. Please also check out the how-to guide [here](https://github.com/ESCAP-SD/geospatialSAEhowto).
 
